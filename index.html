@@ -417,6 +417,37 @@ body {
   margin-bottom: 10px;
   font-family: 'DM Mono', monospace;
 }
+
+/* RECURRING */
+.rec-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 13px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+  animation: fadeIn .2s ease;
+}
+.rec-icon {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.rec-info { flex: 1; min-width: 0; }
+.rec-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rec-meta { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.rec-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.rec-amount { font-size: 15px; font-weight: 600; font-family: 'DM Mono', monospace; }
+.rec-freq {
+  font-size: 10px; font-weight: 600;
+  padding: 2px 7px; border-radius: 99px;
+  background: var(--accent-bg); color: var(--accent);
+  text-transform: uppercase; letter-spacing: .05em;
+}
+.rec-del { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 14px; padding: 2px; }
 </style>
 </head>
 <body>
@@ -526,6 +557,36 @@ body {
   </div>
 </div>
 
+<div id="page-recurring" class="page">
+  <div class="section-label">Nuovo pagamento ricorrente</div>
+  <div class="field">
+    <label>Descrizione</label>
+    <input type="text" id="rec-desc" placeholder="Es. Netflix, affitto, palestra..." autocomplete="off" />
+  </div>
+  <div class="field">
+    <label>Importo (€)</label>
+    <input type="number" id="rec-amount" placeholder="0,00" step="0.01" min="0" inputmode="decimal" />
+  </div>
+  <div class="field">
+    <label>Frequenza</label>
+    <select id="rec-freq">
+      <option value="weekly">Ogni settimana</option>
+      <option value="monthly" selected>Ogni mese</option>
+      <option value="biannual">Ogni 6 mesi</option>
+    </select>
+  </div>
+  <div class="field">
+    <label id="rec-day-label">Giorno del mese (1–28)</label>
+    <input type="number" id="rec-day" placeholder="Es. 5" min="1" max="28" inputmode="numeric" />
+  </div>
+  <div class="section-label">Categoria</div>
+  <div class="cat-grid" id="rec-cat-grid"></div>
+  <button class="add-btn" onclick="addRecurring()">+ Aggiungi ricorrente</button>
+
+  <div class="section-label" style="margin-top:24px">Pagamenti attivi</div>
+  <div id="rec-list"></div>
+</div>
+
 <nav class="nav">
   <button class="nav-btn active" onclick="showPage('add')">
     <span class="icon">＋</span>
@@ -545,6 +606,11 @@ body {
   <button class="nav-btn" onclick="showPage('sync')">
     <span class="icon">☁️</span>
     <span>Sync</span>
+    <span class="nav-dot"></span>
+  </button>
+  <button class="nav-btn" onclick="showPage('recurring')">
+    <span class="icon">🔁</span>
+    <span>Ricorrenti</span>
     <span class="nav-dot"></span>
   </button>
   <button class="nav-btn" onclick="showPage('settings')">
@@ -569,8 +635,10 @@ let state = {
   expenses: [],
   categories: [...DEFAULT_CATS],
   selectedCat: '',
+  recSelectedCat: '',
   webhookUrl: '',
-  lastSync: null
+  lastSync: null,
+  recurring: []
 };
 
 function save() { localStorage.setItem('spese_v2', JSON.stringify(state)); }
@@ -593,11 +661,12 @@ function showPage(p) {
   document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
   document.getElementById('page-' + p).classList.add('active');
-  const pages = ['add','list','stats','sync','settings'];
+  const pages = ['add','list','stats','sync','recurring','settings'];
   document.querySelectorAll('.nav-btn')[pages.indexOf(p)].classList.add('active');
   if (p === 'list') { populateSelects(); renderList(); }
   if (p === 'stats') { populateSelects(); renderStats(); }
   if (p === 'sync') { renderSync(); }
+  if (p === 'recurring') { renderRecurringCatGrid(); renderRecurringList(); updateRecDayLabel(); }
   if (p === 'settings') { renderSettings(); }
 }
 
@@ -904,7 +973,186 @@ function clearAll() {
   }
 }
 
-// Auto-sync check (last day of month)
+// ── RECURRING PAYMENTS ────────────────────────────────────────
+
+const FREQ_LABELS = { weekly: 'Settimanale', monthly: 'Mensile', biannual: 'Ogni 6 mesi' };
+
+function updateRecDayLabel() {
+  const freq = document.getElementById('rec-freq').value;
+  const label = document.getElementById('rec-day-label');
+  if (freq === 'weekly') {
+    label.textContent = 'Giorno della settimana (1=Lun, 7=Dom)';
+    document.getElementById('rec-day').max = 7;
+    document.getElementById('rec-day').placeholder = 'Es. 1 (lunedì)';
+  } else {
+    label.textContent = 'Giorno del mese (1–28)';
+    document.getElementById('rec-day').max = 28;
+    document.getElementById('rec-day').placeholder = 'Es. 5';
+  }
+}
+document.getElementById('rec-freq').addEventListener('change', updateRecDayLabel);
+
+function renderRecurringCatGrid() {
+  document.getElementById('rec-cat-grid').innerHTML = state.categories.map(c =>
+    `<button class="cat-btn${state.recSelectedCat === c ? ' selected' : ''}" onclick="selectRecCat('${c.replace(/'/g,"\\'")}')">
+      <span class="cat-emoji">${getEmoji(c)}</span>${c}
+    </button>`
+  ).join('');
+}
+
+function selectRecCat(c) { state.recSelectedCat = c; renderRecurringCatGrid(); }
+
+function addRecurring() {
+  const desc = document.getElementById('rec-desc').value.trim();
+  const amt = parseFloat(document.getElementById('rec-amount').value);
+  const freq = document.getElementById('rec-freq').value;
+  const day = parseInt(document.getElementById('rec-day').value);
+  if (!desc) { toast('⚠️ Inserisci una descrizione'); return; }
+  if (!amt || amt <= 0) { toast('⚠️ Inserisci un importo valido'); return; }
+  if (!day || day < 1) { toast('⚠️ Inserisci il giorno'); return; }
+  if (freq === 'weekly' && day > 7) { toast('⚠️ Giorno 1–7'); return; }
+  if (freq !== 'weekly' && day > 28) { toast('⚠️ Giorno 1–28'); return; }
+  if (!state.recSelectedCat) { toast('⚠️ Seleziona una categoria'); return; }
+  const rec = {
+    id: Date.now(),
+    desc, amount: amt, freq, day,
+    category: state.recSelectedCat,
+    createdAt: new Date().toISOString(),
+    lastApplied: null
+  };
+  state.recurring.push(rec);
+  save();
+  document.getElementById('rec-desc').value = '';
+  document.getElementById('rec-amount').value = '';
+  document.getElementById('rec-day').value = '';
+  state.recSelectedCat = '';
+  renderRecurringCatGrid();
+  renderRecurringList();
+  toast('✓ Pagamento ricorrente aggiunto!');
+}
+
+function renderRecurringList() {
+  const el = document.getElementById('rec-list');
+  if (!state.recurring.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🔁</div><p>Nessun pagamento ricorrente</p></div>';
+    return;
+  }
+  el.innerHTML = state.recurring.map(r => {
+    const ci = state.categories.indexOf(r.category) % COLORS.length;
+    const bg = COLORS[ci] + '18';
+    const freqLabel = FREQ_LABELS[r.freq] || r.freq;
+    let dayDesc = '';
+    if (r.freq === 'weekly') {
+      const days = ['','Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
+      dayDesc = 'ogni ' + (days[r.day] || 'giorno ' + r.day);
+    } else {
+      dayDesc = 'il giorno ' + r.day;
+    }
+    const lastApplied = r.lastApplied ? 'Ultimo: ' + fmtDate(r.lastApplied.slice(0,10)) : 'Non ancora applicato';
+    return `<div class="rec-item">
+      <div class="rec-icon" style="background:${bg}">${getEmoji(r.category)}</div>
+      <div class="rec-info">
+        <div class="rec-name">${r.desc}</div>
+        <div class="rec-meta">${r.category} · ${dayDesc} · ${lastApplied}</div>
+      </div>
+      <div class="rec-right">
+        <div class="rec-amount">${fmtEuro(r.amount)}</div>
+        <div class="rec-freq">${freqLabel}</div>
+        <button class="rec-del" onclick="deleteRecurring(${r.id})" title="Elimina">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function deleteRecurring(id) {
+  state.recurring = state.recurring.filter(r => r.id !== id);
+  save(); renderRecurringList(); toast('Ricorrente eliminato');
+}
+
+// Applies due recurring payments silently on app open
+function applyRecurringPayments() {
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  let applied = 0;
+
+  state.recurring.forEach(rec => {
+    // Build list of dates this recurring payment was due since last applied (or creation)
+    const since = rec.lastApplied ? new Date(rec.lastApplied) : new Date(rec.createdAt);
+    const dueDates = getDueDates(rec, since, today);
+    dueDates.forEach(dateStr => {
+      // Avoid duplicates: check if expense already exists for this rec+date
+      const alreadyIn = state.expenses.some(e => e.recurringId === rec.id && e.date === dateStr);
+      if (!alreadyIn) {
+        state.expenses.push({
+          id: Date.now() + Math.random(),
+          desc: rec.desc,
+          amount: rec.amount,
+          date: dateStr,
+          category: rec.category,
+          note: 'Automatico',
+          recurringId: rec.id
+        });
+        applied++;
+      }
+    });
+    if (dueDates.length) rec.lastApplied = dueDates[dueDates.length - 1];
+  });
+
+  if (applied > 0) save();
+}
+
+function getDueDates(rec, since, today) {
+  const dates = [];
+  const sinceDate = new Date(since);
+  sinceDate.setHours(0,0,0,0);
+  const todayDate = new Date(today);
+  todayDate.setHours(0,0,0,0);
+
+  if (rec.freq === 'weekly') {
+    // rec.day: 1=Mon ... 7=Sun (JS: 0=Sun,1=Mon...6=Sat)
+    const jsDow = rec.day % 7; // 7→0(Sun), 1→1(Mon)...
+    const cur = new Date(sinceDate);
+    cur.setDate(cur.getDate() + 1); // start day after last applied
+    while (cur <= todayDate) {
+      if (cur.getDay() === jsDow) {
+        dates.push(cur.toISOString().split('T')[0]);
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+  } else if (rec.freq === 'monthly') {
+    // Every month on rec.day
+    const cur = new Date(sinceDate);
+    cur.setDate(1);
+    cur.setMonth(cur.getMonth() + (sinceDate.getDate() >= rec.day ? 1 : 0));
+    while (cur <= todayDate) {
+      const d = new Date(cur.getFullYear(), cur.getMonth(), rec.day);
+      if (d > sinceDate && d <= todayDate) {
+        dates.push(d.toISOString().split('T')[0]);
+      }
+      cur.setMonth(cur.getMonth() + 1);
+    }
+  } else if (rec.freq === 'biannual') {
+    // Every 6 months on rec.day
+    const cur = new Date(sinceDate);
+    cur.setDate(1);
+    cur.setMonth(cur.getMonth() + 1);
+    while (cur <= todayDate) {
+      const d = new Date(cur.getFullYear(), cur.getMonth(), rec.day);
+      if (d > sinceDate && d <= todayDate) {
+        // Check if month is aligned to a 6-month interval from creation
+        const created = new Date(rec.createdAt);
+        const monthDiff = (d.getFullYear() - created.getFullYear()) * 12 + (d.getMonth() - created.getMonth());
+        if (monthDiff % 6 === 0) dates.push(d.toISOString().split('T')[0]);
+      }
+      cur.setMonth(cur.getMonth() + 1);
+    }
+  }
+  return dates;
+}
+
+// ── END RECURRING ──────────────────────────────────────────────
+
+
 function checkAutoSync() {
   const d = new Date();
   const lastDay = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
@@ -919,6 +1167,7 @@ function checkAutoSync() {
 
 // Init
 load();
+applyRecurringPayments();
 document.getElementById('date').value = new Date().toISOString().split('T')[0];
 const now = new Date();
 document.getElementById('header-sub').textContent = MONTHS[now.getMonth()] + ' ' + now.getFullYear();
