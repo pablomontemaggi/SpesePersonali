@@ -88,7 +88,7 @@ body {
 
 /* ── TYPE TOGGLE ── */
 .type-toggle {
-  display: flex; margin: 16px 16px 0;
+  display: flex; margin: 16px 20px 0;
   background: var(--bg); border-radius: var(--radius-md);
   padding: 3px; gap: 3px;
 }
@@ -104,7 +104,7 @@ body {
 .type-btn.active-income  { background: var(--green); color: white; }
 
 /* ── GROUPED SECTIONS ── */
-.group { margin: 16px 16px 0; }
+.group { margin: 16px 20px 0; }
 .group-title {
   font-size: 13px; color: var(--text2);
   text-transform: uppercase; letter-spacing: .04em;
@@ -113,11 +113,11 @@ body {
 .card { background: var(--surface); border-radius: var(--radius-lg); overflow: hidden; }
 .row {
   display: flex; align-items: center;
-  padding: 12px 16px; gap: 12px;
-  position: relative; min-height: 44px;
+  padding: 13px 20px; gap: 14px;
+  position: relative; min-height: 48px;
 }
 .row + .row::before {
-  content: ''; position: absolute; top: 0; left: 16px; right: 0;
+  content: ''; position: absolute; top: 0; left: 20px; right: 0;
   height: 0.5px; background: var(--separator);
 }
 .row-icon { width: 30px; height: 30px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
@@ -143,7 +143,7 @@ body {
 .row-textarea::placeholder { color: var(--text3); }
 
 /* ── CATEGORY GRID ── */
-.cat-section { margin: 16px 16px 0; }
+.cat-section { margin: 16px 20px 0; }
 .cat-section-title { font-size: 13px; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; padding: 0 4px 6px; }
 .cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .cat-btn {
@@ -160,7 +160,7 @@ body {
 
 /* ── ACTION BUTTON ── */
 .action-btn {
-  margin: 16px 16px 0; width: calc(100% - 32px);
+  margin: 16px 20px 0; width: calc(100% - 40px);
   padding: 16px; color: white; border: none; border-radius: var(--radius-lg);
   font-size: 17px; font-weight: 600; font-family: -apple-system, sans-serif;
   cursor: pointer; transition: opacity .15s, transform .1s;
@@ -171,14 +171,14 @@ body {
 .action-btn-blue  { background: var(--accent); }
 
 /* ── LIST ── */
-.filter-bar { display: flex; gap: 8px; padding: 12px 16px 0; }
+.filter-bar { display: flex; gap: 8px; padding: 12px 20px 0; }
 .filter-pill {
   flex: 1; background: var(--surface); border: none; border-radius: 99px;
   padding: 7px 12px; font-size: 14px; font-weight: 500;
   font-family: -apple-system, sans-serif; color: var(--text2);
   cursor: pointer; -webkit-appearance: none; outline: none;
 }
-.total-bar { padding: 8px 20px 0; font-size: 13px; color: var(--text2); text-align: right; font-variant-numeric: tabular-nums; }
+.total-bar { padding: 8px 24px 0; font-size: 13px; color: var(--text2); text-align: right; font-variant-numeric: tabular-nums; }
 
 .exp-item {
   display: flex; align-items: center; padding: 10px 16px; gap: 12px;
@@ -199,7 +199,7 @@ body {
 .exp-del:active { color: var(--red); }
 
 /* ── BALANCE CARDS ── */
-.balance-row { display: flex; gap: 8px; margin: 16px 16px 0; }
+.balance-row { display: flex; gap: 8px; margin: 16px 20px 0; }
 .balance-card { flex: 1; border-radius: var(--radius-lg); padding: 14px; }
 .balance-card-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; opacity: .75; }
 .balance-card-val { font-size: 22px; font-weight: 700; margin-top: 4px; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
@@ -211,7 +211,7 @@ body {
 
 /* ── STATS ── */
 .summary-card {
-  margin: 16px 16px 0; border-radius: var(--radius-lg); padding: 20px; color: white;
+  margin: 16px 20px 0; border-radius: var(--radius-lg); padding: 20px; color: white;
 }
 .summary-label { font-size: 13px; opacity: .75; font-weight: 500; }
 .summary-amount { font-size: 44px; font-weight: 700; letter-spacing: -1.5px; margin-top: 4px; font-variant-numeric: tabular-nums; }
@@ -221,7 +221,7 @@ body {
 .summary-pill-label { font-size: 10px; opacity: .8; text-transform: uppercase; letter-spacing: .04em; }
 .summary-pill-val { font-size: 15px; font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; }
 
-.chart-card { margin: 10px 16px 0; background: var(--surface); border-radius: var(--radius-lg); padding: 16px; }
+.chart-card { margin: 10px 20px 0; background: var(--surface); border-radius: var(--radius-lg); padding: 16px; }
 .chart-card:last-child { margin-bottom: 8px; }
 .chart-title { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 14px; }
 .pie-legend { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
@@ -230,7 +230,7 @@ body {
 .legend-val { font-weight: 600; margin-left: auto; font-variant-numeric: tabular-nums; font-size: 13px; }
 
 /* ── MONTH SELECTOR ── */
-.month-bar { padding: 12px 16px 0; }
+.month-bar { padding: 12px 20px 0; }
 .month-bar select {
   width: 100%; background: var(--surface); border: none; border-radius: var(--radius-md);
   padding: 10px 14px; font-size: 15px; font-weight: 600;
@@ -239,7 +239,7 @@ body {
 }
 
 /* ── SYNC ── */
-.sync-status { display: flex; align-items: center; gap: 12px; margin: 16px 16px 0; background: var(--surface); border-radius: var(--radius-lg); padding: 14px 16px; }
+.sync-status { display: flex; align-items: center; gap: 12px; margin: 16px 20px 0; background: var(--surface); border-radius: var(--radius-lg); padding: 14px 16px; }
 .sync-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .sync-dot-ok   { background: var(--green); }
 .sync-dot-wait { background: var(--orange); }
