@@ -457,7 +457,8 @@ body {
     <div class="group-title">Categorie spese</div>
     <div class="card">
       <div class="row">
-        <input class="row-input" id="new-cat" placeholder="Nuova categoria…" autocomplete="off" />
+        <input class="row-input" id="new-cat-emoji" placeholder="🙂" autocomplete="off" style="max-width:44px;text-align:center;font-size:22px;flex:none" />
+        <input class="row-input" id="new-cat" placeholder="Nome categoria…" autocomplete="off" />
         <button onclick="addCat()" style="background:var(--accent);color:white;border:none;border-radius:8px;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">+</button>
       </div>
     </div>
@@ -467,7 +468,8 @@ body {
     <div class="group-title">Categorie entrate</div>
     <div class="card">
       <div class="row">
-        <input class="row-input" id="new-inc-cat" placeholder="Nuova categoria entrata…" autocomplete="off" />
+        <input class="row-input" id="new-inc-cat-emoji" placeholder="🙂" autocomplete="off" style="max-width:44px;text-align:center;font-size:22px;flex:none" />
+        <input class="row-input" id="new-inc-cat" placeholder="Nome categoria entrata…" autocomplete="off" />
         <button onclick="addIncCat()" style="background:var(--green);color:white;border:none;border-radius:8px;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">+</button>
       </div>
     </div>
@@ -525,15 +527,16 @@ const DEFAULT_CATS     = ['Casa','Auto','Cibo & Ristoranti','Vestiti','Viaggi','
 const DEFAULT_INC_CATS = ['Stipendio','Freelance','Affitto percepito','Rimborso','Regalo ricevuto','Altro'];
 const FREQ_LABELS = { weekly:'Settimanale', monthly:'Mensile', biannual:'Ogni 6 mesi' };
 
-function getEmoji(c) { return EMOJI_MAP[c] || '💰'; }
+function getEmoji(c) { return state.customEmoji[c] || EMOJI_MAP[c] || '💰'; }
 
 let state = {
-  expenses: [],         // { id, desc, amount, date, category, note, type:'expense'|'income', recurringId? }
+  expenses: [],
   categories:    [...DEFAULT_CATS],
   incCategories: [...DEFAULT_INC_CATS],
   selectedCat:    '',
   recSelectedCat: '',
   currentType:    'expense',
+  customEmoji:    {},
   webhookUrl: '',
   lastSync:   null,
   recurring:  []
@@ -1098,22 +1101,45 @@ function renderSettings() {
   document.getElementById('settings-count').textContent = state.expenses.length;
 }
 function addCat() {
-  const v=document.getElementById('new-cat').value.trim();
-  if(!v){toast('Inserisci un nome');return;} if(state.categories.includes(v)){toast('Già esistente');return;}
-  state.categories.push(v); save(); renderSettings(); renderCatGrid(); document.getElementById('new-cat').value=''; toast('✓ Categoria aggiunta');
+  const v = document.getElementById('new-cat').value.trim();
+  const emoji = document.getElementById('new-cat-emoji').value.trim();
+  if (!v) { toast('Inserisci un nome'); return; }
+  if (state.categories.includes(v)) { toast('Già esistente'); return; }
+  state.categories.push(v);
+  if (emoji) state.customEmoji[v] = emoji;
+  save(); renderSettings(); renderCatGrid();
+  document.getElementById('new-cat').value = '';
+  document.getElementById('new-cat-emoji').value = '';
+  toast('✓ Categoria aggiunta');
 }
 function delCat(i) {
-  if(state.categories.length<=1){toast('Serve almeno una categoria');return;}
-  state.categories.splice(i,1); save(); renderSettings(); renderCatGrid(); toast('Categoria eliminata');
+  if (state.categories.length <= 1) { toast('Serve almeno una categoria'); return; }
+  const name = state.categories[i];
+  if (state.expenses.some(e => e.category === name)) {
+    if (!confirm(`Ci sono spese in "${name}". Eliminarla comunque?`)) return;
+  }
+  state.categories.splice(i, 1);
+  delete state.customEmoji[name];
+  save(); renderSettings(); renderCatGrid(); toast('Categoria eliminata');
 }
 function addIncCat() {
-  const v=document.getElementById('new-inc-cat').value.trim();
-  if(!v){toast('Inserisci un nome');return;} if(state.incCategories.includes(v)){toast('Già esistente');return;}
-  state.incCategories.push(v); save(); renderSettings(); document.getElementById('new-inc-cat').value=''; toast('✓ Categoria aggiunta');
+  const v = document.getElementById('new-inc-cat').value.trim();
+  const emoji = document.getElementById('new-inc-cat-emoji').value.trim();
+  if (!v) { toast('Inserisci un nome'); return; }
+  if (state.incCategories.includes(v)) { toast('Già esistente'); return; }
+  state.incCategories.push(v);
+  if (emoji) state.customEmoji[v] = emoji;
+  save(); renderSettings();
+  document.getElementById('new-inc-cat').value = '';
+  document.getElementById('new-inc-cat-emoji').value = '';
+  toast('✓ Categoria aggiunta');
 }
 function delIncCat(i) {
-  if(state.incCategories.length<=1){toast('Serve almeno una categoria');return;}
-  state.incCategories.splice(i,1); save(); renderSettings(); toast('Categoria eliminata');
+  if (state.incCategories.length <= 1) { toast('Serve almeno una categoria'); return; }
+  const name = state.incCategories[i];
+  delete state.customEmoji[name];
+  state.incCategories.splice(i, 1);
+  save(); renderSettings(); toast('Categoria eliminata');
 }
 function exportJSON() {
   const blob=new Blob([JSON.stringify({expenses:state.expenses,exportDate:new Date().toISOString()},null,2)],{type:'application/json'});
