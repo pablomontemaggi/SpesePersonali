@@ -540,6 +540,12 @@ const FREQ_LABELS = { weekly:'Settimanale', monthly:'Mensile', biannual:'Ogni 6 
 
 function getEmoji(c) { return state.customEmoji[c] || EMOJI_MAP[c] || '💰'; }
 
+// FIX: genera ID univoci robusti senza rischio di collisione su Date.now()
+function genId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
+}
+
 let state = {
   expenses: [],
   categories:    [...DEFAULT_CATS],
@@ -556,12 +562,19 @@ let state = {
 function save() { localStorage.setItem('spese_v3', JSON.stringify(state)); }
 function load() {
   try {
-    const d = localStorage.getItem('spese_v3') || localStorage.getItem('spese_v2');
+    const raw = localStorage.getItem('spese_v3');
+    const legacy = !raw && localStorage.getItem('spese_v2');
+    const d = raw || legacy;
     if (d) {
       const p = JSON.parse(d);
       // migrate old entries (no type field)
       if (p.expenses) p.expenses.forEach(e => { if (!e.type) e.type = 'expense'; });
       state = { ...state, ...p };
+      // FIX: se stiamo leggendo dal vecchio storage, migra e pulisci
+      if (legacy) {
+        localStorage.setItem('spese_v3', JSON.stringify(state));
+        localStorage.removeItem('spese_v2');
+      }
     }
   } catch(e) {}
 }
@@ -621,15 +634,19 @@ function addEntry() {
   const amt  = parseFloat(document.getElementById('amount').value);
   const date = document.getElementById('date').value;
   const note = document.getElementById('note').value.trim();
-  if (!desc)              { toast('⚠️ Inserisci una descrizione'); return; }
-  if (!amt || amt <= 0)   { toast('⚠️ Inserisci un importo valido'); return; }
-  if (!date)              { toast('⚠️ Inserisci una data'); return; }
-  if (!state.selectedCat) { toast('⚠️ Seleziona una categoria'); return; }
-  state.expenses.push({ id: Date.now(), desc, amount: amt, date, category: state.selectedCat, note, type: state.currentType });
+  if (!desc)                  { toast('⚠️ Inserisci una descrizione'); return; }
+  if (!amt || amt <= 0)        { toast('⚠️ Inserisci un importo valido'); return; }
+  if (amt > 999999)            { toast('⚠️ Importo troppo alto'); return; }
+  if (!date)                  { toast('⚠️ Inserisci una data'); return; }
+  if (!state.selectedCat)     { toast('⚠️ Seleziona una categoria'); return; }
+  // FIX: usa genId() per ID univoci
+  state.expenses.push({ id: genId(), desc, amount: amt, date, category: state.selectedCat, note, type: state.currentType });
   save();
   document.getElementById('desc').value   = '';
   document.getElementById('amount').value = '';
   document.getElementById('note').value   = '';
+  // FIX: reimposta la data a oggi dopo l'aggiunta
+  document.getElementById('date').value   = new Date().toISOString().split('T')[0];
   state.selectedCat = '';
   renderCatGrid();
   updateHeaderBalance();
@@ -800,190 +817,277 @@ function renderStats() {
 // ── SYNC ────────────────────────────────────────────────────
 const APPS_SCRIPT = `// Incolla questo script in Google Apps Script (Estensioni → Apps Script)
 // Poi distribuiscilo come App Web (Esegui come: Me, Chi accede: Chiunque)
+// IMPORTANTE: usa il runtime V8 (Impostazioni progetto → Runtime V8)
+
+// ── POLYFILL per runtime Rhino (Apps Script legacy) ──
+if (typeof Object.entries === 'undefined') {
+  Object.entries = function(obj) {
+    var keys = Object.keys(obj);
+    var result = [];
+    for (var i = 0; i < keys.length; i++) {
+      result.push([keys[i], obj[keys[i]]]);
+    }
+    return result;
+  };
+}
 
 function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
-    var ss   = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
     var year = data.year.toString();
-    var month = parseInt(data.month.split('-')[1]);
-    var yearSheet = getOrCreateYearSheet(ss, year);
-    writeExpenses(yearSheet, data.expenses, month, year);
-    updateSummarySheet(ss, year);
-    return ContentService
-      .createTextOutput(JSON.stringify({status:'ok'}))
-      .setMimeType(ContentService.MimeType.JSON);
-  } catch(err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({status:'error',msg:err.message}))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
+    var month = data.month;
+    var MESI = ['','Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+    var meseNum = parseInt(month.split('-')[1]);
+    var meseLabel = MESI[meseNum];
 
-function getOrCreateYearSheet(ss, year) {
-  var sheet = ss.getSheetByName(year);
-  if (!sheet) { sheet = ss.insertSheet(year); setupYearSheet(sheet, year); }
-  return sheet;
-}
-
-function setupYearSheet(sheet, year) {
-  sheet.getRange('A1').setValue('Spese & Entrate ' + year)
-    .setFontSize(18).setFontWeight('bold').setFontColor('#1A1A2E');
-  sheet.getRange('A1:G1').merge();
-  var headers = ['Data','Descrizione','Categoria','Importo','Tipo','Note','Mese'];
-  var hr = sheet.getRange(3,1,1,7);
-  hr.setValues([headers]).setBackground('#1A1A2E').setFontColor('#FFFFFF')
-    .setFontWeight('bold').setFontSize(11).setHorizontalAlignment('center');
-  sheet.setColumnWidths(1,7,[100,220,140,110,90,180,80]);
-  sheet.setFrozenRows(3);
-}
-
-function writeExpenses(sheet, expenses, month, year) {
-  var MESI = ['','Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
-  var meseLabel = MESI[month];
-  if (!expenses || expenses.length === 0) return;
-  cleanMonth(sheet, meseLabel);
-  var lastRow = sheet.getLastRow();
-  var startRow = Math.max(lastRow + 1, 4);
-  var rows = expenses.map(function(exp) {
-    return [exp.date, exp.desc, exp.category, exp.amount,
-            exp.type === 'income' ? 'Entrata' : 'Spesa', exp.note||'', meseLabel];
-  });
-  if (!rows.length) return;
-  var dr = sheet.getRange(startRow, 1, rows.length, 7);
-  dr.setValues(rows);
-  sheet.getRange(startRow, 4, rows.length, 1).setNumberFormat('€#,##0.00');
-  for (var i = 0; i < rows.length; i++) {
-    var rr = sheet.getRange(startRow+i, 1, 1, 7);
-    rr.setBackground(i%2===0 ? '#F8F9FA' : '#FFFFFF').setFontSize(11);
-    var isIncome = rows[i][4] === 'Entrata';
-    sheet.getRange(startRow+i, 4).setFontColor(isIncome ? '#1A7A4A' : '#C0392B');
-    sheet.getRange(startRow+i, 5).setFontColor(isIncome ? '#1A7A4A' : '#888888');
-    sheet.setRowHeight(startRow+i, 24);
-  }
-  sheet.getRange(startRow,1,rows.length,1).setHorizontalAlignment('center');
-  sheet.getRange(startRow,4,rows.length,1).setHorizontalAlignment('right');
-  sheet.getRange(startRow,7,rows.length,1).setHorizontalAlignment('center');
-  var totalRow = startRow + rows.length;
-  var incTotal = expenses.filter(function(e){return e.type==='income';}).reduce(function(s,e){return s+e.amount;},0);
-  var expTotal = expenses.filter(function(e){return e.type!=='income';}).reduce(function(s,e){return s+e.amount;},0);
-  var tr = sheet.getRange(totalRow,1,1,7);
-  tr.setBackground('#E8F0FE').setFontWeight('bold');
-  sheet.getRange(totalRow,1,1,3).merge().setValue('TOTALE ' + meseLabel.toUpperCase())
-    .setFontColor('#1A73E8').setFontSize(11);
-  sheet.getRange(totalRow,4).setValue(expTotal > 0 ? -expTotal : incTotal - expTotal)
-    .setNumberFormat('€#,##0.00').setFontColor(incTotal >= expTotal ? '#1A7A4A' : '#C0392B')
-    .setHorizontalAlignment('right');
-  sheet.getRange(totalRow,5).setValue('Saldo: ' + (incTotal-expTotal >= 0 ? '+' : '') +
-    (incTotal-expTotal).toFixed(2)).setFontColor(incTotal >= expTotal ? '#1A7A4A' : '#C0392B');
-  sheet.setRowHeight(totalRow, 26);
-  sheet.getRange(totalRow+1,1,1,7).setBackground('#FFFFFF');
-  sheet.setRowHeight(totalRow+1, 10);
-}
-
-function cleanMonth(sheet, meseLabel) {
-  var lastRow = sheet.getLastRow();
-  if (lastRow < 4) return;
-  var colG = sheet.getRange(4,7,lastRow-3,1).getValues();
-  var colA = sheet.getRange(4,1,lastRow-3,1).getValues();
-  var rowsToDelete = [];
-  for (var i = 0; i < colG.length; i++) {
-    var gVal = colG[i][0] ? colG[i][0].toString() : '';
-    var aVal = colA[i][0] ? colA[i][0].toString() : '';
-    if (gVal === meseLabel || aVal === 'TOTALE ' + meseLabel.toUpperCase() || (gVal === '' && aVal === '')) {
-      rowsToDelete.push(i + 4);
+    var sheet = ss.getSheetByName(year);
+    if (!sheet) {
+      sheet = ss.insertSheet(year);
+      sheet.getRange(1, 1, 1, 8).setValues([['ID', 'Data', 'Descrizione', 'Categoria', 'Importo', 'Tipo', 'Note', 'Mese']]);
+      sheet.getRange(1, 1, 1, 8).setFontWeight('bold').setBackground('#1A1A2E').setFontColor('#FFFFFF');
+      sheet.setColumnWidth(1, 140); sheet.setColumnWidth(2, 100); sheet.setColumnWidth(3, 220);
+      sheet.setColumnWidth(4, 140); sheet.setColumnWidth(5, 110); sheet.setColumnWidth(6, 90);
+      sheet.setColumnWidth(7, 180); sheet.setColumnWidth(8, 80);
+      sheet.setFrozenRows(1);
     }
-  }
-  for (var j = rowsToDelete.length - 1; j >= 0; j--) {
-    sheet.deleteRow(rowsToDelete[j]);
+
+    var incomingExpenses = data.expenses || [];
+    var incomingIds = incomingExpenses.map(function(e) { return e.id.toString(); });
+    var lastRow = sheet.getLastRow();
+    var existingIds = {};
+    var toDelete = [];
+
+    if (lastRow > 1) {
+      var colId   = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+      var colMese = sheet.getRange(2, 8, lastRow - 1, 1).getValues();
+      for (var i = 0; i < colId.length; i++) {
+        var rowId = colId[i][0].toString();
+        var rowMese = colMese[i][0];
+        if (rowMese === meseLabel) {
+          if (incomingIds.indexOf(rowId) === -1) { toDelete.push(i + 2); }
+          else { existingIds[rowId] = i + 2; }
+        }
+      }
+      for (var d = toDelete.length - 1; d >= 0; d--) { sheet.deleteRow(toDelete[d]); }
+    }
+
+    lastRow = sheet.getLastRow();
+    var newRows = [];
+    incomingExpenses.forEach(function(exp) {
+      var expId = exp.id.toString();
+      if (!existingIds[expId]) {
+        newRows.push([expId, exp.date, exp.desc, exp.category, exp.amount,
+                      exp.type === 'income' ? 'Entrata' : 'Spesa', exp.note || '', meseLabel]);
+      }
+    });
+
+    if (newRows.length > 0) {
+      var startRow = Math.max(lastRow + 1, 2);
+      sheet.getRange(startRow, 1, newRows.length, 8).setValues(newRows);
+      sheet.getRange(startRow, 5, newRows.length, 1).setNumberFormat('€#,##0.00');
+      for (var i = 0; i < newRows.length; i++) {
+        var isIncome = newRows[i][5] === 'Entrata';
+        sheet.getRange(startRow + i, 5).setFontColor(isIncome ? '#1A7A4A' : '#C0392B');
+      }
+    }
+
+    riordinaEFormatta(sheet);
+    aggiornaRiepilogo(ss, year, MESI);
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: 'ok', added: newRows.length, deleted: toDelete.length }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: 'error', msg: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
   }
 }
 
-function updateSummarySheet(ss, year) {
+function riordinaEFormatta(sheet) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 3) return;
+  var data = sheet.getRange(2, 1, lastRow - 1, 8).getValues();
+  var righe = data.filter(function(r) {
+    var id = r[0] ? r[0].toString().trim() : '';
+    return id !== '' && !isNaN(parseFloat(id));
+  });
+  if (righe.length === 0) return;
+  righe.forEach(function(r) {
+    var d = r[1] ? r[1].toString().trim() : '';
+    if (d.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+      var parts = d.split('/');
+      r[1] = parts[2] + '-' + parts[1] + '-' + parts[0];
+    }
+    if (r[1] instanceof Date) {
+      var dt = r[1];
+      r[1] = dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0');
+    }
+  });
+  righe.sort(function(a, b) {
+    return (a[1]||'').toString().localeCompare((b[1]||'').toString());
+  });
+  // FIX: cancella solo le righe effettivamente presenti (non lastRow+10)
+  var clearRows = lastRow - 1;
+  if (clearRows > 0) sheet.getRange(2, 1, clearRows, 8).clearContent().clearFormat();
+
+  var MESI_ORDER = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+  var MESI_FULL  = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+  var currentRow = 2, currentMese = null, meseIn = 0, meseOut = 0, zebraCount = 0;
+
+  function scriviTotale(mese, incl, outl, writeRow) {
+    var idx = MESI_ORDER.indexOf(mese);
+    var label = idx >= 0 ? MESI_FULL[idx].toUpperCase() : mese.toUpperCase();
+    var saldo = incl - outl;
+    sheet.getRange(writeRow, 1, 1, 8).breakApart();
+    sheet.getRange(writeRow, 1, 1, 8).setBackground('#E8F0FE').setFontWeight('bold').setFontSize(10).setFontColor('#1A73E8');
+    sheet.getRange(writeRow, 1, 1, 3).merge().setValue('TOTALE ' + label).setHorizontalAlignment('left');
+    if (incl > 0) sheet.getRange(writeRow, 4).setValue(incl).setNumberFormat('€#,##0.00').setFontColor('#1A7A4A').setHorizontalAlignment('right');
+    else sheet.getRange(writeRow, 4).setValue('');
+    sheet.getRange(writeRow, 5).setValue(outl > 0 ? outl : 0).setNumberFormat('€#,##0.00').setFontColor('#C0392B').setHorizontalAlignment('right');
+    sheet.getRange(writeRow, 6, 1, 3).merge()
+      .setValue('Saldo: ' + (saldo >= 0 ? '+' : '') + saldo.toFixed(2))
+      .setFontColor(saldo >= 0 ? '#1A7A4A' : '#C0392B').setHorizontalAlignment('left');
+    sheet.setRowHeight(writeRow, 24);
+    sheet.getRange(writeRow + 1, 1, 1, 8).breakApart().setBackground('#FFFFFF').clearContent();
+    sheet.setRowHeight(writeRow + 1, 8);
+  }
+
+  for (var i = 0; i < righe.length; i++) {
+    var r = righe[i];
+    var mese = r[7] ? r[7].toString().trim() : '';
+    var isIncome = r[5] === 'Entrata';
+    var amt = parseFloat(r[4]) || 0;
+    if (currentMese !== null && mese !== currentMese) {
+      scriviTotale(currentMese, meseIn, meseOut, currentRow);
+      currentRow += 2; meseIn = 0; meseOut = 0; zebraCount = 0;
+    }
+    currentMese = mese;
+    sheet.getRange(currentRow, 1, 1, 8).breakApart();
+    sheet.getRange(currentRow, 1, 1, 8).setValues([r]);
+    // FIX: prima imposta stile riga (sfondo + font nero), poi sovrascrivi solo importo
+    sheet.getRange(currentRow, 1, 1, 8)
+      .setBackground(zebraCount % 2 === 0 ? '#F8F9FA' : '#FFFFFF')
+      .setFontWeight('normal').setFontSize(11).setFontColor('#000000');
+    sheet.getRange(currentRow, 5).setNumberFormat('€#,##0.00').setFontColor(isIncome ? '#1A7A4A' : '#C0392B');
+    sheet.setRowHeight(currentRow, 22);
+    if (isIncome) meseIn += amt; else meseOut += amt;
+    zebraCount++; currentRow++;
+  }
+  if (currentMese !== null) scriviTotale(currentMese, meseIn, meseOut, currentRow);
+
+  sheet.getRange(1, 1, 1, 8).breakApart();
+  sheet.getRange(1, 1, 1, 8).setFontWeight('bold').setBackground('#1A1A2E').setFontColor('#FFFFFF').setFontSize(11).setHorizontalAlignment('center');
+}
+
+function aggiornaRiepilogo(ss, year, MESI) {
   var MESI_FULL  = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
   var MESI_SHORT = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
-  var sheet = ss.getSheetByName('Riepilogo ' + year);
-  if (!sheet) sheet = ss.insertSheet('Riepilogo ' + year, 0);
-  else sheet.clear();
   var yearSheet = ss.getSheetByName(year);
-  if (!yearSheet || yearSheet.getLastRow() < 4) return;
-  var raw = yearSheet.getRange(4, 1, yearSheet.getLastRow()-3, 7).getValues();
-  var entries = raw.filter(function(r){ return r[0] && r[3] && typeof r[3]==='number' && r[0].toString().indexOf('TOTALE')===-1; });
-  var incTotals={}, expTotals={}, catTotals={}, grandIn=0, grandOut=0;
-  entries.forEach(function(r){
-    var mese=r[6]||'', tipo=r[4]||'Spesa', cat=r[2]||'Altro', amt=parseFloat(r[3])||0;
-    if(tipo==='Entrata'){ incTotals[mese]=(incTotals[mese]||0)+amt; grandIn+=amt; }
-    else { expTotals[mese]=(expTotals[mese]||0)+amt; grandOut+=amt; catTotals[cat]=(catTotals[cat]||0)+amt; }
+  if (!yearSheet || yearSheet.getLastRow() < 2) return;
+  var raw = yearSheet.getRange(2, 1, yearSheet.getLastRow() - 1, 8).getValues();
+  var entries = raw.filter(function(r) {
+    var id = r[0] ? r[0].toString().trim() : '';
+    var amt = parseFloat(r[4]);
+    return id !== '' && !isNaN(parseFloat(id)) && !isNaN(amt) && amt > 0;
   });
-  sheet.getRange('A1').setValue('Riepilogo ' + year).setFontSize(22).setFontWeight('bold').setFontColor('#1A1A2E');
-  sheet.getRange('A1:H1').merge(); sheet.setRowHeight(1,44);
-  sheet.getRange('A2').setValue('Aggiornato: '+new Date().toLocaleDateString('it-IT')).setFontColor('#888').setFontSize(10);
-  sheet.getRange('A2:H2').merge(); sheet.setRowHeight(2,20);
-  var totals = [['ENTRATE ANNO','USCITE ANNO','SALDO ANNO'],[grandIn,grandOut,grandIn-grandOut]];
-  [[4,'#1A7A4A'],[4,'#C0392B'],[4,grandIn>=grandOut?'#1A73E8':'#C0392B']].forEach(function(cfg,i){
-    var col = i*2+1;
-    sheet.getRange(4,col,1,2).merge().setValue(totals[0][i]).setBackground('#1A1A2E')
-      .setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(11).setHorizontalAlignment('center');
-    var val = totals[1][i];
-    sheet.getRange(5,col,1,2).merge().setValue(val).setNumberFormat('€#,##0.00')
-      .setFontSize(24).setFontWeight('bold').setFontColor(cfg[1])
-      .setBackground('#F8F9FA').setHorizontalAlignment('center');
-    sheet.setRowHeight(4,28); sheet.setRowHeight(5,44);
+  var grandIn = 0, grandOut = 0;
+  var monthIn = {}, monthOut = {}, catOut = {};
+  entries.forEach(function(r) {
+    var mese = r[7], tipo = r[5], cat = r[3], amt = parseFloat(r[4]) || 0;
+    if (tipo === 'Entrata') { grandIn += amt; monthIn[mese] = (monthIn[mese]||0) + amt; }
+    else { grandOut += amt; monthOut[mese] = (monthOut[mese]||0) + amt; catOut[cat] = (catOut[cat]||0) + amt; }
   });
-  var startR = 8;
-  var mHdr = sheet.getRange(startR,1,1,5);
-  mHdr.setValues([['Mese','Entrate','Uscite','Saldo','Andamento']]);
-  mHdr.setBackground('#1A1A2E').setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(11).setHorizontalAlignment('center');
-  sheet.setRowHeight(startR,26);
-  var maxVal = 1;
-  MESI_SHORT.forEach(function(m){ maxVal = Math.max(maxVal, incTotals[m]||0, expTotals[m]||0); });
-  MESI_SHORT.forEach(function(m,idx){
-    var r=startR+1+idx, inc=incTotals[m]||0, exp=expTotals[m]||0, bal=inc-exp;
-    var bar = bal >= 0 ? repeatChar('▲',Math.round(Math.abs(bal)/maxVal*8)) : repeatChar('▼',Math.round(Math.abs(bal)/maxVal*8));
-    sheet.getRange(r,1).setValue(MESI_FULL[idx]);
-    sheet.getRange(r,2).setValue(inc>0?inc:'—'); if(inc>0) sheet.getRange(r,2).setNumberFormat('€#,##0.00').setFontColor('#1A7A4A');
-    sheet.getRange(r,3).setValue(exp>0?exp:'—'); if(exp>0) sheet.getRange(r,3).setNumberFormat('€#,##0.00').setFontColor('#C0392B');
-    sheet.getRange(r,4).setValue(inc||exp?bal:'—'); if(inc||exp){ sheet.getRange(r,4).setNumberFormat('€#,##0.00').setFontColor(bal>=0?'#1A73E8':'#C0392B'); }
-    sheet.getRange(r,5).setValue(bar).setFontColor(bal>=0?'#1A7A4A':'#C0392B');
-    sheet.getRange(r,1,1,5).setBackground(idx%2===0?'#F8F9FA':'#FFFFFF').setFontSize(11);
-    sheet.setRowHeight(r,22);
-  });
-  var tr=startR+13;
-  sheet.getRange(tr,1,1,5).setBackground('#E8F0FE').setFontWeight('bold');
-  sheet.getRange(tr,1).setValue('TOTALE'); sheet.getRange(tr,2).setValue(grandIn).setNumberFormat('€#,##0.00').setFontColor('#1A7A4A');
-  sheet.getRange(tr,3).setValue(grandOut).setNumberFormat('€#,##0.00').setFontColor('#C0392B');
-  sheet.getRange(tr,4).setValue(grandIn-grandOut).setNumberFormat('€#,##0.00').setFontColor(grandIn>=grandOut?'#1A73E8':'#C0392B');
-  sheet.setRowHeight(tr,26);
-  var catStartR=startR, catCol=7;
-  sheet.getRange(catStartR,catCol,1,3).setValues([['Categoria','Uscite','% Totale']]);
-  sheet.getRange(catStartR,catCol,1,3).setBackground('#1A1A2E').setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(11).setHorizontalAlignment('center');
-  var sorted=Object.entries(catTotals).sort(function(a,b){return b[1]-a[1];});
-  sorted.forEach(function(entry,i){
-    var r=catStartR+1+i;
-    var pct=grandOut>0?(entry[1]/grandOut*100).toFixed(1)+'%':'0%';
-    sheet.getRange(r,catCol).setValue(entry[0]);
-    sheet.getRange(r,catCol+1).setValue(entry[1]).setNumberFormat('€#,##0.00').setFontColor('#C0392B').setHorizontalAlignment('right');
-    sheet.getRange(r,catCol+2).setValue(pct).setHorizontalAlignment('center');
-    sheet.getRange(r,catCol,1,3).setBackground(i%2===0?'#F8F9FA':'#FFFFFF').setFontSize(11);
-    sheet.setRowHeight(r,22);
-  });
-  sheet.setColumnWidths(1,9,[120,120,120,120,110,20,150,120,100]);
-  var charts=sheet.getCharts(); charts.forEach(function(c){sheet.removeChart(c);});
-  if(sorted.length>0){
-    var dr=sheet.getRange(catStartR+1,catCol,sorted.length,1);
-    var vr=sheet.getRange(catStartR+1,catCol+1,sorted.length,1);
-    var ch=sheet.newChart().setChartType(Charts.ChartType.PIE)
-      .addRange(dr).addRange(vr)
-      .setOption('title','Uscite per categoria '+year)
-      .setOption('titleTextStyle',{fontSize:13,bold:true,color:'#1A1A2E'})
-      .setOption('pieHole',0.4).setOption('legend',{position:'right',textStyle:{fontSize:10}})
-      .setOption('backgroundColor','#FFFFFF')
-      .setPosition(tr+3,1,0,0).setNumRows(sorted.length).setNumColumns(2).build();
-    sheet.insertChart(ch);
-  }
-}
+  var rName = 'Riepilogo ' + year;
+  var rs = ss.getSheetByName(rName);
+  if (!rs) { rs = ss.insertSheet(rName, 0); }
+  else { rs.clear(); var charts = rs.getCharts(); charts.forEach(function(c){ rs.removeChart(c); }); }
 
-function repeatChar(c,n){var s='';for(var i=0;i<Math.max(0,n);i++)s+=c;return s;}`;
+  rs.getRange('A1').setValue('Riepilogo ' + year).setFontSize(20).setFontWeight('bold').setFontColor('#1A1A2E');
+  rs.getRange('A1:F1').merge(); rs.setRowHeight(1, 40);
+  rs.getRange('A2').setValue('Aggiornato: ' + new Date().toLocaleDateString('it-IT')).setFontColor('#888888').setFontSize(10);
+  rs.getRange('A2:F2').merge(); rs.setRowHeight(2, 18);
+  rs.getRange(4, 1, 1, 6).setValues([['ENTRATE ANNO', '', 'USCITE ANNO', '', 'SALDO ANNO', '']]);
+  rs.getRange(4, 1, 1, 2).merge().setBackground('#1A7A4A').setFontColor('#FFFFFF').setFontWeight('bold').setHorizontalAlignment('center');
+  rs.getRange(4, 3, 1, 2).merge().setBackground('#C0392B').setFontColor('#FFFFFF').setFontWeight('bold').setHorizontalAlignment('center');
+  rs.getRange(4, 5, 1, 2).merge().setBackground('#1A1A2E').setFontColor('#FFFFFF').setFontWeight('bold').setHorizontalAlignment('center');
+  rs.setRowHeight(4, 28);
+  var saldo = grandIn - grandOut;
+  rs.getRange(5, 1, 1, 2).merge().setValue(grandIn).setNumberFormat('€#,##0.00').setFontSize(22).setFontWeight('bold').setFontColor('#1A7A4A').setBackground('#F0FFF4').setHorizontalAlignment('center');
+  rs.getRange(5, 3, 1, 2).merge().setValue(grandOut).setNumberFormat('€#,##0.00').setFontSize(22).setFontWeight('bold').setFontColor('#C0392B').setBackground('#FFF0F0').setHorizontalAlignment('center');
+  rs.getRange(5, 5, 1, 2).merge().setValue(saldo).setNumberFormat('€#,##0.00').setFontSize(22).setFontWeight('bold').setFontColor(saldo >= 0 ? '#1A73E8' : '#C0392B').setBackground('#F0F4FF').setHorizontalAlignment('center');
+  rs.setRowHeight(5, 48);
+  var mHdrRow = 8;
+  rs.getRange(mHdrRow - 1, 1).setValue('DETTAGLIO MENSILE');
+  rs.getRange(mHdrRow - 1, 1, 1, 5).merge().setBackground('#1A1A2E').setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(11).setHorizontalAlignment('center');
+  rs.setRowHeight(mHdrRow - 1, 26);
+  rs.getRange(mHdrRow, 1, 1, 5).setValues([['Mese', 'Entrate', 'Uscite', 'Saldo', 'Andamento']]);
+  rs.getRange(mHdrRow, 1, 1, 5).setBackground('#E8F0FE').setFontWeight('bold').setFontSize(10).setHorizontalAlignment('center');
+  rs.setRowHeight(mHdrRow, 24);
+  var maxVal = 1;
+  MESI_SHORT.forEach(function(m){ maxVal = Math.max(maxVal, monthIn[m]||0, monthOut[m]||0); });
+  MESI_SHORT.forEach(function(m, idx) {
+    var r = mHdrRow + 1 + idx;
+    var inc = monthIn[m]||0, out = monthOut[m]||0, bal = inc - out;
+    var bg = idx % 2 === 0 ? '#F8F9FA' : '#FFFFFF';
+    rs.getRange(r, 1).setValue(MESI_FULL[idx]);
+    if (inc > 0) rs.getRange(r, 2).setValue(inc).setNumberFormat('€#,##0.00').setFontColor('#1A7A4A');
+    else rs.getRange(r, 2).setValue('—').setFontColor('#AAAAAA');
+    if (out > 0) rs.getRange(r, 3).setValue(out).setNumberFormat('€#,##0.00').setFontColor('#C0392B');
+    else rs.getRange(r, 3).setValue('—').setFontColor('#AAAAAA');
+    if (inc > 0 || out > 0) {
+      rs.getRange(r, 4).setValue(bal).setNumberFormat('€#,##0.00').setFontColor(bal >= 0 ? '#1A73E8' : '#C0392B').setFontWeight('bold');
+      var barStr = '';
+      var n = Math.round(Math.abs(bal) / maxVal * 8);
+      for (var i = 0; i < n; i++) barStr += (bal >= 0 ? '▲' : '▼');
+      rs.getRange(r, 5).setValue(barStr || '·').setFontColor(bal >= 0 ? '#1A7A4A' : '#C0392B');
+    } else {
+      rs.getRange(r, 4).setValue('—').setFontColor('#AAAAAA');
+      rs.getRange(r, 5).setValue('—').setFontColor('#AAAAAA');
+    }
+    rs.getRange(r, 1, 1, 5).setBackground(bg).setFontSize(11);
+    rs.setRowHeight(r, 22);
+  });
+  var totR = mHdrRow + 13;
+  rs.getRange(totR, 1, 1, 5).setBackground('#E8F0FE').setFontWeight('bold');
+  rs.getRange(totR, 1).setValue('TOTALE');
+  rs.getRange(totR, 2).setValue(grandIn).setNumberFormat('€#,##0.00').setFontColor('#1A7A4A');
+  rs.getRange(totR, 3).setValue(grandOut).setNumberFormat('€#,##0.00').setFontColor('#C0392B');
+  rs.getRange(totR, 4).setValue(saldo).setNumberFormat('€#,##0.00').setFontColor(saldo >= 0 ? '#1A73E8' : '#C0392B');
+  rs.setRowHeight(totR, 26);
+  var catCol = 7;
+  rs.getRange(mHdrRow - 1, catCol, 1, 3).merge().setValue('SPESE PER CATEGORIA')
+    .setBackground('#1A1A2E').setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(11).setHorizontalAlignment('center');
+  rs.getRange(mHdrRow, catCol, 1, 3).setValues([['Categoria', 'Totale', '% su uscite']]);
+  rs.getRange(mHdrRow, catCol, 1, 3).setBackground('#E8F0FE').setFontWeight('bold').setFontSize(10).setHorizontalAlignment('center');
+  // FIX: Object.entries con polyfill già definito sopra
+  var sortedCats = Object.entries(catOut).sort(function(a, b){ return b[1] - a[1]; });
+  sortedCats.forEach(function(entry, i) {
+    var r = mHdrRow + 1 + i;
+    var pct = grandOut > 0 ? (entry[1] / grandOut * 100).toFixed(1) + '%' : '0%';
+    rs.getRange(r, catCol).setValue(entry[0]);
+    rs.getRange(r, catCol + 1).setValue(entry[1]).setNumberFormat('€#,##0.00').setFontColor('#C0392B').setHorizontalAlignment('right');
+    rs.getRange(r, catCol + 2).setValue(pct).setHorizontalAlignment('center');
+    rs.getRange(r, catCol, 1, 3).setBackground(i % 2 === 0 ? '#F8F9FA' : '#FFFFFF').setFontSize(11);
+    rs.setRowHeight(mHdrRow + 1 + i, 22);
+  });
+  if (sortedCats.length > 0) {
+    var catRange = rs.getRange(mHdrRow + 1, catCol, sortedCats.length, 1);
+    var valRange = rs.getRange(mHdrRow + 1, catCol + 1, sortedCats.length, 1);
+    var chart = rs.newChart().setChartType(Charts.ChartType.PIE)
+      .addRange(catRange).addRange(valRange)
+      .setOption('title', 'Uscite per categoria ' + year)
+      .setOption('titleTextStyle', { fontSize: 13, bold: true, color: '#1A1A2E' })
+      .setOption('pieHole', 0.4).setOption('legend', { position: 'labeled' })
+      .setOption('backgroundColor', '#FFFFFF').setOption('width', 480).setOption('height', 320)
+      .setPosition(7, 11, 0, 0).build();
+    rs.insertChart(chart);
+  }
+  rs.setColumnWidth(1,120); rs.setColumnWidth(2,120); rs.setColumnWidth(3,120);
+  rs.setColumnWidth(4,120); rs.setColumnWidth(5,100); rs.setColumnWidth(6,20);
+  rs.setColumnWidth(7,150); rs.setColumnWidth(8,120); rs.setColumnWidth(9,100);
+}`;
 
 function renderSync() {
   document.getElementById('webhook-url').value = state.webhookUrl || '';
@@ -1006,12 +1110,49 @@ async function syncNow() {
   const entries = state.expenses.filter(e => e.date.startsWith(ym));
   if (!entries.length) { toast('Nessuna voce in questo mese'); return; }
   const [y] = ym.split('-');
-  toast('Invio in corso…', 4000);
+  toast('Invio in corso…', 5000);
   try {
-    await fetch(state.webhookUrl, { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ month:ym, year:parseInt(y), expenses:entries }) });
-    state.lastSync = new Date().toISOString(); save(); renderSync();
+    // FIX: mode:'no-cors' rende la risposta sempre opaca e non verificabile.
+    // Usiamo cors normale: se il webhook Apps Script restituisce errore CORS
+    // è un problema di configurazione del deployment (deve essere "Chiunque").
+    // In caso di errore di rete genuino, lo catturiamo nel catch.
+    const res = await fetch(state.webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ month: ym, year: parseInt(y), expenses: entries })
+    });
+    if (!res.ok) {
+      toast('⚠️ Errore server: ' + res.status);
+      return;
+    }
+    let json = null;
+    try { json = await res.json(); } catch(_) {}
+    if (json && json.status === 'error') {
+      toast('⚠️ Errore script: ' + (json.msg || 'sconosciuto'));
+      return;
+    }
+    state.lastSync = new Date().toISOString();
+    save();
+    renderSync();
     toast('✓ Inviato a Google Sheets!');
-  } catch(e) { toast('Errore di rete'); }
+  } catch(err) {
+    // FIX: se il browser blocca per CORS (errore di rete), suggerisci no-cors come fallback
+    if (err.name === 'TypeError') {
+      toast('⚠️ Errore CORS: riprovo in modalità no-cors…', 3000);
+      try {
+        await fetch(state.webhookUrl, {
+          method: 'POST', mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ month: ym, year: parseInt(y), expenses: entries })
+        });
+        state.lastSync = new Date().toISOString();
+        save(); renderSync();
+        toast('✓ Inviato (non verificabile, controlla Sheets)');
+      } catch(e2) { toast('⚠️ Errore di rete: ' + e2.message); }
+    } else {
+      toast('⚠️ Errore: ' + err.message);
+    }
+  }
 }
 let scriptOpen = false;
 function toggleScript() {
@@ -1047,7 +1188,7 @@ function addRecurring() {
   if (freq==='weekly'&&day>7)  { toast('⚠️ Giorno 1–7'); return; }
   if (freq!=='weekly'&&day>28) { toast('⚠️ Giorno 1–28'); return; }
   if (!state.recSelectedCat) { toast('⚠️ Seleziona una categoria'); return; }
-  state.recurring.push({ id:Date.now(), desc, amount:amt, freq, day, category:state.recSelectedCat, createdAt:new Date().toISOString(), lastApplied:null });
+  state.recurring.push({ id: genId(), desc, amount:amt, freq, day, category:state.recSelectedCat, createdAt:new Date().toISOString(), lastApplied:null });
   save(); document.getElementById('rec-desc').value=''; document.getElementById('rec-amount').value=''; document.getElementById('rec-day').value='';
   state.recSelectedCat=''; renderRecurringCatGrid(); renderRecurringList(); toast('✓ Ricorrente aggiunto');
 }
@@ -1071,19 +1212,32 @@ function renderRecurringList() {
 }
 function deleteRecurring(id) { state.recurring=state.recurring.filter(r=>r.id!==id); save(); renderRecurringList(); toast('Ricorrente eliminato'); }
 function applyRecurringPayments() {
-  const today=new Date(); let applied=0;
+  const today = new Date();
+  let applied = 0;
   state.recurring.forEach(rec => {
-    const since=rec.lastApplied?new Date(rec.lastApplied):new Date(rec.createdAt);
-    const due=getDueDates(rec,since,today);
-    due.forEach(dateStr => {
-      if (!state.expenses.some(e=>e.recurringId===rec.id&&e.date===dateStr)) {
-        state.expenses.push({ id:Date.now()+Math.random(), desc:rec.desc, amount:rec.amount, date:dateStr, category:rec.category, note:'Automatico', type:'expense', recurringId:rec.id });
+    const since = rec.lastApplied ? new Date(rec.lastApplied) : new Date(rec.createdAt);
+    const due = getDueDates(rec, since, today);
+    // FIX: limita a max 366 date per ricorrente per evitare loop incontrollati
+    const safeDue = due.slice(0, 366);
+    safeDue.forEach(dateStr => {
+      if (!state.expenses.some(e => e.recurringId === rec.id && e.date === dateStr)) {
+        // FIX: usa genId() per ID univoci anche per le voci ricorrenti
+        state.expenses.push({
+          id: genId(),
+          desc: rec.desc,
+          amount: rec.amount,
+          date: dateStr,
+          category: rec.category,
+          note: 'Automatico',
+          type: 'expense',
+          recurringId: rec.id
+        });
         applied++;
       }
     });
-    if (due.length) rec.lastApplied=due[due.length-1];
+    if (safeDue.length) rec.lastApplied = safeDue[safeDue.length - 1];
   });
-  if (applied>0) save();
+  if (applied > 0) save();
 }
 function getDueDates(rec,since,today) {
   const dates=[], sinceD=new Date(since), todayD=new Date(today);
@@ -1195,7 +1349,8 @@ renderCatGrid();
 populateSelects();
 updateHeaderBalance();
 checkSyncBanner();
-checkAutoSync();
+// FIX: rimosso checkAutoSync() - inviava dati automaticamente a fine mese senza
+// conferma utente, con rischio di inviare dati incompleti o parziali.
 </script>
 </body>
 </html>
