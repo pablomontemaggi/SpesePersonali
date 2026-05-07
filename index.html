@@ -1180,6 +1180,7 @@ function goToSync() {
   dismissBanner();
   showPage('sync');
 }
+function checkAutoSync() {
   const d=new Date(), lastDay=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
   if(d.getDate()===lastDay&&state.webhookUrl){const k='autosync_'+curYM();if(!localStorage.getItem(k)){syncNow();localStorage.setItem(k,'1');}}
 }
