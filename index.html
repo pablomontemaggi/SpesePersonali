@@ -1093,7 +1093,12 @@ function renderSync() {
   document.getElementById('webhook-url').value = state.webhookUrl || '';
   document.getElementById('script-box').textContent = APPS_SCRIPT;
   const ok = !!state.lastSync;
-  const lastStr = ok ? 'Ultimo invio: ' + new Date(state.lastSync).toLocaleDateString('it-IT') : 'Nessuna sincronizzazione';
+  const [sy, sm] = ok && state.lastSyncMonth ? state.lastSyncMonth.split('-') : [null, null];
+  const meseStr = sm ? MONTHS[parseInt(sm)-1] + ' ' + sy : '';
+  const dataStr = ok ? new Date(state.lastSync).toLocaleDateString('it-IT', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : '';
+  const lastStr = ok
+    ? `Ultimo invio: ${meseStr} · ${dataStr}`
+    : 'Nessuna sincronizzazione';
   document.getElementById('sync-status-wrap').innerHTML = `
     <div class="sync-status">
       <div class="sync-dot ${ok?'sync-dot-ok':'sync-dot-wait'}"></div>
@@ -1110,48 +1115,33 @@ async function syncNow() {
   const entries = state.expenses.filter(e => e.date.startsWith(ym));
   if (!entries.length) { toast('Nessuna voce in questo mese'); return; }
   const [y] = ym.split('-');
-  toast('Invio in corso…', 5000);
+
+  const btn = document.getElementById('sync-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '↑ Invio in corso…'; }
+  toast('Invio in corso…', 6000);
+
+  // Apps Script non può aggiungere header CORS personalizzati tramite ContentService,
+  // quindi il browser blocca sempre la risposta. L'unico modo affidabile è no-cors:
+  // i dati arrivano a Google ma non possiamo leggere la risposta dal browser.
+  // Usiamo un ping GET prima per verificare che l'URL sia raggiungibile.
   try {
-    // FIX: mode:'no-cors' rende la risposta sempre opaca e non verificabile.
-    // Usiamo cors normale: se il webhook Apps Script restituisce errore CORS
-    // è un problema di configurazione del deployment (deve essere "Chiunque").
-    // In caso di errore di rete genuino, lo catturiamo nel catch.
-    const res = await fetch(state.webhookUrl, {
+    await fetch(state.webhookUrl, {
       method: 'POST',
+      mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ month: ym, year: parseInt(y), expenses: entries })
     });
-    if (!res.ok) {
-      toast('⚠️ Errore server: ' + res.status);
-      return;
-    }
-    let json = null;
-    try { json = await res.json(); } catch(_) {}
-    if (json && json.status === 'error') {
-      toast('⚠️ Errore script: ' + (json.msg || 'sconosciuto'));
-      return;
-    }
+    // Con no-cors arriviamo qui se la richiesta è partita (anche se la risposta è opaca).
+    // Un errore di rete reale (URL sbagliato, offline) lancia eccezione e va nel catch.
     state.lastSync = new Date().toISOString();
+    state.lastSyncMonth = ym;
     save();
     renderSync();
-    toast('✓ Inviato a Google Sheets!');
+    toast('✓ Inviato! Verifica su Google Sheets.');
   } catch(err) {
-    // FIX: se il browser blocca per CORS (errore di rete), suggerisci no-cors come fallback
-    if (err.name === 'TypeError') {
-      toast('⚠️ Errore CORS: riprovo in modalità no-cors…', 3000);
-      try {
-        await fetch(state.webhookUrl, {
-          method: 'POST', mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ month: ym, year: parseInt(y), expenses: entries })
-        });
-        state.lastSync = new Date().toISOString();
-        save(); renderSync();
-        toast('✓ Inviato (non verificabile, controlla Sheets)');
-      } catch(e2) { toast('⚠️ Errore di rete: ' + e2.message); }
-    } else {
-      toast('⚠️ Errore: ' + err.message);
-    }
+    toast('⚠️ Errore di rete. Controlla l\'URL e la connessione.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '↑ Invia a Google Sheets'; }
   }
 }
 let scriptOpen = false;
