@@ -713,13 +713,14 @@ function renderList() {
       </div>
       <div class="exp-right">
         <div class="${isInc?'exp-amount-in':'exp-amount-out'}">${isInc?'+':'−'}${fmtEuro(e.amount)}</div>
-        <button class="exp-del" onclick="deleteEntry(${e.id})">−</button>
+        <button class="exp-del" onclick="deleteEntry('${e.id}')">−</button>
       </div>
     </div>`;
   }).join('');
 }
 function deleteEntry(id) {
-  state.expenses = state.expenses.filter(e => e.id !== id);
+  const sid = id.toString();
+  state.expenses = state.expenses.filter(e => e.id.toString() !== sid);
   save(); renderList(); updateHeaderBalance(); toast('Voce eliminata');
 }
 
