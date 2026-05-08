@@ -564,6 +564,7 @@ let state = {
   webhookUrl: '',
   webhookToken: '',
   lastSync:   null,
+  syncedMonths: [], // mesi sincronizzati almeno una volta
   recurring:  []
 };
  
@@ -676,14 +677,24 @@ function updateHeaderBalance() {
 // ── SELECTS ─────────────────────────────────────────────────
 function allYMs() {
   const s = new Set(state.expenses.map(e => e.date.slice(0,7)));
-  s.add(curYM()); return [...s].sort().reverse();
+  s.add(curYM());
+  return [...s].sort().reverse();
+}
+// Per la tendina sync includiamo anche i mesi sincronizzati in passato
+// così un mese svuotato resta selezionabile per poterlo pulire dal foglio
+function allYMsForSync() {
+  const s = new Set(state.expenses.map(e => e.date.slice(0,7)));
+  s.add(curYM());
+  (state.syncedMonths || []).forEach(ym => s.add(ym));
+  return [...s].sort().reverse();
 }
 function populateSelects() {
   const yms = allYMs(), cur = curYM();
   ['filter-month','stats-month','sync-month'].forEach(id => {
     const sel = document.getElementById(id); if (!sel) return;
     const prev = sel.value || cur;
-    sel.innerHTML = yms.map(ym => {
+    const list = id === 'sync-month' ? allYMsForSync() : yms;
+    sel.innerHTML = list.map(ym => {
       const [y,m] = ym.split('-');
       return `<option value="${ym}"${ym===prev?' selected':''}>${MONTHS[parseInt(m)-1]} ${y}</option>`;
     }).join('');
@@ -1163,6 +1174,14 @@ async function syncNow() {
     // Un errore di rete reale (URL sbagliato, offline) lancia eccezione e va nel catch.
     state.lastSync = new Date().toISOString();
     state.lastSyncMonth = ym;
+    // Tieni traccia dei mesi sincronizzati per mostrarli nella tendina anche se svuotati
+    if (!state.syncedMonths) state.syncedMonths = [];
+    if (isEmpty) {
+      // Mese pulito: rimuovilo dai syncedMonths
+      state.syncedMonths = state.syncedMonths.filter(m => m !== ym);
+    } else if (state.syncedMonths.indexOf(ym) === -1) {
+      state.syncedMonths.push(ym);
+    }
     save();
     renderSync();
     toast(isEmpty ? '✓ Mese rimosso da Google Sheets.' : '✓ Inviato! Verifica su Google Sheets.');
