@@ -739,8 +739,17 @@ function renderList() {
 }
 function deleteEntry(id) {
   const sid = id.toString();
-  state.expenses = state.expenses.filter(e => e.id.toString() !== sid);
-  save(); renderList(); updateHeaderBalance(); toast('Voce eliminata');
+  const entry = state.expenses.find(e => e.id.toString() === sid);
+  if (!entry) return;
+  showModal(
+    'Elimina voce',
+    '"' + entry.desc + '" · ' + fmtEuro(entry.amount),
+    'Elimina',
+    function() {
+      state.expenses = state.expenses.filter(e => e.id.toString() !== sid);
+      save(); renderList(); updateHeaderBalance(); toast('Voce eliminata');
+    }
+  );
 }
  
 // ── STATS ────────────────────────────────────────────────────
