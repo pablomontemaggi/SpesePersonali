@@ -30,9 +30,9 @@
   --radius-sm:     8px;
   --nav-h:         83px;
 }
-
+ 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-
+ 
 body {
   font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
   background: var(--bg);
@@ -43,7 +43,7 @@ body {
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
-
+ 
 /* ── HEADER ── */
 .header {
   position: sticky; top: 0; z-index: 100;
@@ -57,7 +57,7 @@ body {
 .header-title { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; line-height: 1; }
 .header-sub { font-size: 13px; color: var(--text2); margin-top: 2px; }
 .header-balance { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
-
+ 
 /* ── TAB BAR ── */
 .tabbar {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
@@ -80,12 +80,12 @@ body {
 .tab-btn .tab-icon { font-size: 24px; line-height: 1; transition: transform .1s; }
 .tab-btn.active { color: var(--accent); }
 .tab-btn:active .tab-icon { transform: scale(.88); }
-
+ 
 /* ── PAGES ── */
 .page { display: none; padding: 0 0 calc(var(--nav-h) + 4px); min-height: 100vh; animation: pageIn .2s ease; }
 .page.active { display: block; }
 @keyframes pageIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
+ 
 /* ── TYPE TOGGLE ── */
 .type-toggle {
   display: flex; margin: 16px 20px 0;
@@ -102,7 +102,7 @@ body {
 }
 .type-btn.active-expense { background: var(--red); color: white; }
 .type-btn.active-income  { background: var(--green); color: white; }
-
+ 
 /* ── GROUPED SECTIONS ── */
 .group { margin: 16px 20px 0; }
 .group-title {
@@ -143,7 +143,7 @@ body {
   -webkit-appearance: none;
 }
 .row-textarea::placeholder { color: var(--text3); }
-
+ 
 /* ── CATEGORY GRID ── */
 .cat-section { margin: 16px 20px 0; }
 .cat-section-title { font-size: 13px; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; padding: 0 4px 6px; }
@@ -159,7 +159,7 @@ body {
 .cat-btn.selected { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
 .cat-btn.selected-income { background: var(--green-light); border-color: var(--green); color: #1A7A4A; }
 .cat-btn:active { transform: scale(.94); }
-
+ 
 /* ── ACTION BUTTON ── */
 .action-btn {
   margin: 16px 20px 0; width: calc(100% - 40px);
@@ -171,7 +171,7 @@ body {
 .action-btn-red   { background: var(--red); }
 .action-btn-green { background: var(--green); }
 .action-btn-blue  { background: var(--accent); }
-
+ 
 /* ── LIST ── */
 .filter-bar { display: flex; gap: 8px; padding: 12px 20px 0; }
 .filter-pill {
@@ -181,7 +181,7 @@ body {
   cursor: pointer; -webkit-appearance: none; outline: none;
 }
 .total-bar { padding: 8px 24px 0; font-size: 13px; color: var(--text2); text-align: right; font-variant-numeric: tabular-nums; }
-
+ 
 .exp-item {
   display: flex; align-items: center; padding: 10px 16px; gap: 12px;
   position: relative; min-height: 52px;
@@ -199,7 +199,7 @@ body {
 .exp-amount-in  { font-size: 17px; font-weight: 600; color: var(--green); font-variant-numeric: tabular-nums; }
 .exp-del { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 18px; padding: 0; line-height: 1; transition: color .12s; }
 .exp-del:active { color: var(--red); }
-
+ 
 /* ── BALANCE CARDS ── */
 .balance-row { display: flex; gap: 8px; margin: 16px 20px 0; }
 .balance-card { flex: 1; border-radius: var(--radius-lg); padding: 12px 10px; min-width: 0; }
@@ -210,7 +210,7 @@ body {
 .bc-expense { background: var(--red);    color: white; }
 .bc-balance-pos { background: var(--accent); color: white; }
 .bc-balance-neg { background: #1C1C1E;   color: white; }
-
+ 
 /* ── STATS ── */
 .summary-card {
   margin: 16px 20px 0; border-radius: var(--radius-lg); padding: 20px; color: white;
@@ -222,7 +222,7 @@ body {
 .summary-pill { flex: 1; background: rgba(255,255,255,.18); border-radius: var(--radius-sm); padding: 8px 10px; }
 .summary-pill-label { font-size: 10px; opacity: .8; text-transform: uppercase; letter-spacing: .04em; }
 .summary-pill-val { font-size: 15px; font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; }
-
+ 
 .chart-card { margin: 10px 20px 0; background: var(--surface); border-radius: var(--radius-lg); padding: 16px; }
 .chart-card:last-child { margin-bottom: 8px; }
 .chart-title { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 14px; }
@@ -230,7 +230,7 @@ body {
 .legend-item { display: flex; align-items: center; gap: 7px; font-size: 13px; }
 .legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
 .legend-val { font-weight: 600; margin-left: auto; font-variant-numeric: tabular-nums; font-size: 13px; }
-
+ 
 /* ── MONTH SELECTOR ── */
 .month-bar { padding: 12px 20px 0; }
 .month-bar select {
@@ -239,7 +239,7 @@ body {
   font-family: -apple-system, sans-serif; color: var(--text); outline: none;
   -webkit-appearance: none; cursor: pointer;
 }
-
+ 
 /* ── SYNC ── */
 .sync-status { display: flex; align-items: center; gap: 12px; margin: 16px 20px 0; background: var(--surface); border-radius: var(--radius-lg); padding: 14px 16px; }
 .sync-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
@@ -254,22 +254,22 @@ body {
   display: none; margin-top: 10px; max-height: 220px; overflow-y: auto;
 }
 .script-box.open { display: block; }
-
+ 
 /* ── RECURRING ── */
 .freq-badge { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 99px; background: var(--accent-light); color: var(--accent); }
-
+ 
 /* ── SETTINGS ── */
 .cat-setting-row { display: flex; align-items: center; padding: 10px 16px; gap: 12px; position: relative; }
 .cat-setting-row + .cat-setting-row::before { content: ''; position: absolute; top: 0; left: 52px; right: 0; height: 0.5px; background: var(--separator); }
 .cat-emoji-sm { font-size: 20px; width: 28px; text-align: center; flex-shrink: 0; }
 .cat-name { flex: 1; font-size: 17px; }
 .cat-del-btn { width: 22px; height: 22px; border-radius: 50%; background: var(--red); border: none; cursor: pointer; color: white; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-
+ 
 /* ── EMPTY ── */
 .empty { text-align: center; padding: 50px 20px; color: var(--text3); }
 .empty-icon { font-size: 44px; margin-bottom: 10px; }
 .empty p { font-size: 15px; }
-
+ 
 /* ── TOAST ── */
 .toast {
   position: fixed; bottom: calc(var(--nav-h) + 14px);
@@ -283,7 +283,7 @@ body {
 </style>
 </head>
 <body>
-
+ 
 <!-- HEADER -->
 <div class="header">
   <div>
@@ -292,7 +292,7 @@ body {
   </div>
   <div class="header-balance" id="header-balance"></div>
 </div>
-
+ 
 <!-- BANNER FINE MESE -->
 <div id="sync-banner" style="display:none;background:#FF9500;padding:11px 20px;display:none;align-items:center;gap:10px">
   <span style="font-size:18px">🔔</span>
@@ -303,7 +303,7 @@ body {
   <button onclick="goToSync()" style="background:white;color:#FF9500;font-size:12px;font-weight:600;padding:5px 10px;border-radius:99px;border:none;cursor:pointer;white-space:nowrap">Sync →</button>
   <button onclick="dismissBanner()" style="background:none;border:none;color:white;font-size:18px;cursor:pointer;padding:0 0 0 4px;line-height:1">×</button>
 </div>
-
+ 
 <!-- PAGE: AGGIUNGI -->
 <div id="page-add" class="page active">
   <!-- Toggle Spesa / Entrata -->
@@ -311,7 +311,7 @@ body {
     <button class="type-btn active-expense" id="btn-expense" onclick="setType('expense')">− Spesa</button>
     <button class="type-btn" id="btn-income" onclick="setType('income')">+ Entrata</button>
   </div>
-
+ 
   <div class="group">
     <div class="card">
       <div class="row">
@@ -336,15 +336,15 @@ body {
       </div>
     </div>
   </div>
-
+ 
   <div class="cat-section">
     <div class="cat-section-title" id="cat-section-title">Categoria spesa</div>
     <div class="cat-grid" id="cat-grid"></div>
   </div>
-
+ 
   <button class="action-btn action-btn-red" id="add-btn" onclick="addEntry()">Aggiungi spesa</button>
 </div>
-
+ 
 <!-- PAGE: LISTA -->
 <div id="page-list" class="page">
   <div class="filter-bar">
@@ -360,7 +360,7 @@ body {
     <div class="card" id="expense-list"></div>
   </div>
 </div>
-
+ 
 <!-- PAGE: GRAFICI -->
 <div id="page-stats" class="page">
   <div class="month-bar">
@@ -380,7 +380,7 @@ body {
     <canvas id="bar-chart" height="170"></canvas>
   </div>
 </div>
-
+ 
 <!-- PAGE: SYNC -->
 <div id="page-sync" class="page">
   <div id="sync-status-wrap"></div>
@@ -425,7 +425,7 @@ body {
     </div>
   </div>
 </div>
-
+ 
 <!-- PAGE: RICORRENTI -->
 <div id="page-recurring" class="page">
   <div class="group">
@@ -468,7 +468,7 @@ body {
     <div class="card" id="rec-list"></div>
   </div>
 </div>
-
+ 
 <!-- PAGE: IMPOSTAZIONI -->
 <div id="page-settings" class="page">
   <div class="group">
@@ -524,7 +524,7 @@ body {
     </div>
   </div>
 </div>
-
+ 
 <!-- TAB BAR -->
 <nav class="tabbar">
   <button class="tab-btn active" onclick="showPage('add')"><span class="tab-icon">＋</span><span>Aggiungi</span></button>
@@ -534,9 +534,9 @@ body {
   <button class="tab-btn" onclick="showPage('recurring')"><span class="tab-icon">🔁</span><span>Ricorrenti</span></button>
   <button class="tab-btn" onclick="showPage('settings')"><span class="tab-icon">⚙️</span><span>Impostazioni</span></button>
 </nav>
-
+ 
 <div class="toast" id="toast"></div>
-
+ 
 <script>
 const MONTHS = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 const COLORS  = ['#007AFF','#34C759','#FF9500','#FF3B30','#AF52DE','#5AC8FA','#FFCC00','#FF2D55','#00C7BE','#30B0C7','#32ADE6','#64D2FF','#FF6961','#C969E0'];
@@ -544,15 +544,15 @@ const EMOJI_MAP = {'Casa':'🏠','Auto':'🚗','Cibo & Ristoranti':'🍕','Vesti
 const DEFAULT_CATS     = ['Casa','Auto','Cibo & Ristoranti','Vestiti','Viaggi','Salute','Spesa','Cura personale','Trasporti','Abbonamenti','Regali','Sport','Intrattenimento'];
 const DEFAULT_INC_CATS = ['Stipendio','Freelance','Affitto percepito','Rimborso','Regalo ricevuto','Altro'];
 const FREQ_LABELS = { weekly:'Settimanale', monthly:'Mensile', biannual:'Ogni 6 mesi' };
-
+ 
 function getEmoji(c) { return state.customEmoji[c] || EMOJI_MAP[c] || '💰'; }
-
+ 
 // FIX: genera ID univoci robusti senza rischio di collisione su Date.now()
 function genId() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
 }
-
+ 
 let state = {
   expenses: [],
   categories:    [...DEFAULT_CATS],
@@ -566,7 +566,7 @@ let state = {
   lastSync:   null,
   recurring:  []
 };
-
+ 
 function save() { localStorage.setItem('spese_v3', JSON.stringify(state)); }
 function load() {
   try {
@@ -586,14 +586,14 @@ function load() {
     }
   } catch(e) {}
 }
-
+ 
 function toast(msg, dur = 2200) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.style.display = 'block';
   clearTimeout(t._timer);
   t._timer = setTimeout(() => t.style.display = 'none', dur);
 }
-
+ 
 const PAGES = ['add','list','stats','sync','recurring','settings'];
 function showPage(p) {
   document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
@@ -606,11 +606,11 @@ function showPage(p) {
   if (p === 'recurring') { renderRecurringCatGrid(); renderRecurringList(); updateRecDayLabel(); }
   if (p === 'settings')  { renderSettings(); }
 }
-
+ 
 function curYM() { return new Date().toISOString().slice(0,7); }
 function fmtEuro(n) { return '€' + Math.abs(Number(n)).toFixed(2).replace('.',','); }
 function fmtDate(s) { return new Date(s + 'T12:00:00').toLocaleDateString('it-IT', { day:'2-digit', month:'short' }); }
-
+ 
 // ── TYPE TOGGLE ──────────────────────────────────────────────
 function setType(type) {
   state.currentType = type;
@@ -624,7 +624,7 @@ function setType(type) {
   document.getElementById('amount-icon').style.background = isExp ? '#FFEBEA' : '#E8F8EC';
   renderCatGrid();
 }
-
+ 
 // ── CATEGORIES ───────────────────────────────────────────────
 function renderCatGrid() {
   const cats = state.currentType === 'expense' ? state.categories : state.incCategories;
@@ -635,7 +635,7 @@ function renderCatGrid() {
   ).join('');
 }
 function selectCat(c) { state.selectedCat = c; renderCatGrid(); }
-
+ 
 // ── ADD ENTRY ────────────────────────────────────────────────
 function addEntry() {
   const desc = document.getElementById('desc').value.trim();
@@ -660,7 +660,7 @@ function addEntry() {
   updateHeaderBalance();
   toast(state.currentType === 'expense' ? '✓ Spesa aggiunta' : '✓ Entrata aggiunta');
 }
-
+ 
 function updateHeaderBalance() {
   const ym = curYM();
   const entries = state.expenses.filter(e => e.date.startsWith(ym));
@@ -672,7 +672,7 @@ function updateHeaderBalance() {
   el.textContent = (balance >= 0 ? '+' : '−') + fmtEuro(balance);
   el.style.color = balance >= 0 ? 'var(--green)' : 'var(--red)';
 }
-
+ 
 // ── SELECTS ─────────────────────────────────────────────────
 function allYMs() {
   const s = new Set(state.expenses.map(e => e.date.slice(0,7)));
@@ -689,7 +689,7 @@ function populateSelects() {
     }).join('');
   });
 }
-
+ 
 // ── LIST ────────────────────────────────────────────────────
 function renderList() {
   populateSelects();
@@ -705,7 +705,7 @@ function renderList() {
   else if (type === 'income')  { bar.textContent = `${entries.length} entrate · +${fmtEuro(totalIn)}`; }
   else if (type === 'expense') { bar.textContent = `${entries.length} spese · −${fmtEuro(totalOut)}`; }
   else { bar.textContent = `${entries.length} voci · Saldo: ${totalIn >= totalOut ? '+' : '−'}${fmtEuro(totalIn - totalOut)}`; }
-
+ 
   const el = document.getElementById('expense-list');
   if (!entries.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🧾</div><p>Nessuna voce trovata</p></div>'; return; }
   const allCats = [...state.categories, ...state.incCategories];
@@ -731,7 +731,7 @@ function deleteEntry(id) {
   state.expenses = state.expenses.filter(e => e.id.toString() !== sid);
   save(); renderList(); updateHeaderBalance(); toast('Voce eliminata');
 }
-
+ 
 // ── STATS ────────────────────────────────────────────────────
 let pieChart = null, barChart = null;
 function renderStats() {
@@ -743,7 +743,7 @@ function renderStats() {
   const expense = entries.filter(e => e.type !== 'income').reduce((s,e) => s + e.amount, 0);
   const balance = income - expense;
   const balPos  = balance >= 0;
-
+ 
   // Balance cards
   document.getElementById('balance-row').innerHTML = `
     <div class="balance-card bc-income">
@@ -761,7 +761,7 @@ function renderStats() {
       <div class="balance-card-val">${balPos?'+':'−'}${fmtEuro(balance)}</div>
       <div class="balance-card-sub">${balPos?'Positivo':'Negativo'}</div>
     </div>`;
-
+ 
   // Summary spese
   const exps = entries.filter(e => e.type !== 'income');
   const cnt  = exps.length;
@@ -781,7 +781,7 @@ function renderStats() {
         <div class="summary-pill"><div class="summary-pill-label">TOP CAT.</div><div class="summary-pill-val">${topC.split(' ')[0]}</div></div>
       </div>
     </div>`;
-
+ 
   // Pie chart spese per categoria
   const catTotals = {};
   state.categories.forEach(c => catTotals[c] = 0);
@@ -799,7 +799,7 @@ function renderStats() {
   document.getElementById('pie-legend').innerHTML = active.slice(0,8).map(([c,v]) =>
     `<div class="legend-item"><div class="legend-dot" style="background:${COLORS[state.categories.indexOf(c)%COLORS.length]}"></div><span>${c}</span><span class="legend-val">${fmtEuro(v)}</span></div>`
   ).join('');
-
+ 
   // Bar chart entrate vs uscite ultimi 6 mesi
   const monthly = {};
   state.expenses.forEach(e => {
@@ -822,12 +822,12 @@ function renderStats() {
     options: { responsive: true, plugins: { legend: { position: 'top', labels: { font: { size: 12 }, boxWidth: 12 } } }, scales: { y: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { callback: v => '€'+v, font: { size: 11 } } }, x: { grid: { display: false } } } }
   });
 }
-
+ 
 // ── SYNC ────────────────────────────────────────────────────
 const APPS_SCRIPT = `// Incolla questo script in Google Apps Script (Estensioni → Apps Script)
 // Poi distribuiscilo come App Web (Esegui come: Me, Chi accede: Chiunque)
 // IMPORTANTE: usa il runtime V8 (Impostazioni progetto → Runtime V8)
-
+ 
 // ── POLYFILL per runtime Rhino (Apps Script legacy) ──
 if (typeof Object.entries === 'undefined') {
   Object.entries = function(obj) {
@@ -839,7 +839,7 @@ if (typeof Object.entries === 'undefined') {
     return result;
   };
 }
-
+ 
 function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
@@ -849,7 +849,7 @@ function doPost(e) {
     var MESI = ['','Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
     var meseNum = parseInt(month.split('-')[1]);
     var meseLabel = MESI[meseNum];
-
+ 
     var sheet = ss.getSheetByName(year);
     if (!sheet) {
       sheet = ss.insertSheet(year);
@@ -860,13 +860,13 @@ function doPost(e) {
       sheet.setColumnWidth(7, 180); sheet.setColumnWidth(8, 80);
       sheet.setFrozenRows(1);
     }
-
+ 
     var incomingExpenses = data.expenses || [];
     var incomingIds = incomingExpenses.map(function(e) { return e.id.toString(); });
     var lastRow = sheet.getLastRow();
     var existingIds = {};
     var toDelete = [];
-
+ 
     if (lastRow > 1) {
       var colId   = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
       var colMese = sheet.getRange(2, 8, lastRow - 1, 1).getValues();
@@ -880,7 +880,7 @@ function doPost(e) {
       }
       for (var d = toDelete.length - 1; d >= 0; d--) { sheet.deleteRow(toDelete[d]); }
     }
-
+ 
     lastRow = sheet.getLastRow();
     var newRows = [];
     incomingExpenses.forEach(function(exp) {
@@ -890,7 +890,7 @@ function doPost(e) {
                       exp.type === 'income' ? 'Entrata' : 'Spesa', exp.note || '', meseLabel]);
       }
     });
-
+ 
     if (newRows.length > 0) {
       var startRow = Math.max(lastRow + 1, 2);
       sheet.getRange(startRow, 1, newRows.length, 8).setValues(newRows);
@@ -900,10 +900,10 @@ function doPost(e) {
         sheet.getRange(startRow + i, 5).setFontColor(isIncome ? '#1A7A4A' : '#C0392B');
       }
     }
-
+ 
     riordinaEFormatta(sheet);
     aggiornaRiepilogo(ss, year, MESI);
-
+ 
     return ContentService
       .createTextOutput(JSON.stringify({ status: 'ok', added: newRows.length, deleted: toDelete.length }))
       .setMimeType(ContentService.MimeType.JSON);
@@ -913,7 +913,7 @@ function doPost(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
-
+ 
 function riordinaEFormatta(sheet) {
   var lastRow = sheet.getLastRow();
   if (lastRow < 3) return;
@@ -940,11 +940,11 @@ function riordinaEFormatta(sheet) {
   // FIX: cancella solo le righe effettivamente presenti (non lastRow+10)
   var clearRows = lastRow - 1;
   if (clearRows > 0) sheet.getRange(2, 1, clearRows, 8).clearContent().clearFormat();
-
+ 
   var MESI_ORDER = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
   var MESI_FULL  = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
   var currentRow = 2, currentMese = null, meseIn = 0, meseOut = 0, zebraCount = 0;
-
+ 
   function scriviTotale(mese, incl, outl, writeRow) {
     var idx = MESI_ORDER.indexOf(mese);
     var label = idx >= 0 ? MESI_FULL[idx].toUpperCase() : mese.toUpperCase();
@@ -962,7 +962,7 @@ function riordinaEFormatta(sheet) {
     sheet.getRange(writeRow + 1, 1, 1, 8).breakApart().setBackground('#FFFFFF').clearContent();
     sheet.setRowHeight(writeRow + 1, 8);
   }
-
+ 
   for (var i = 0; i < righe.length; i++) {
     var r = righe[i];
     var mese = r[7] ? r[7].toString().trim() : '';
@@ -985,11 +985,11 @@ function riordinaEFormatta(sheet) {
     zebraCount++; currentRow++;
   }
   if (currentMese !== null) scriviTotale(currentMese, meseIn, meseOut, currentRow);
-
+ 
   sheet.getRange(1, 1, 1, 8).breakApart();
   sheet.getRange(1, 1, 1, 8).setFontWeight('bold').setBackground('#1A1A2E').setFontColor('#FFFFFF').setFontSize(11).setHorizontalAlignment('center');
 }
-
+ 
 function aggiornaRiepilogo(ss, year, MESI) {
   var MESI_FULL  = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
   var MESI_SHORT = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
@@ -1012,7 +1012,7 @@ function aggiornaRiepilogo(ss, year, MESI) {
   var rs = ss.getSheetByName(rName);
   if (!rs) { rs = ss.insertSheet(rName, 0); }
   else { rs.clear(); var charts = rs.getCharts(); charts.forEach(function(c){ rs.removeChart(c); }); }
-
+ 
   rs.getRange('A1').setValue('Riepilogo ' + year).setFontSize(20).setFontWeight('bold').setFontColor('#1A1A2E');
   rs.getRange('A1:F1').merge(); rs.setRowHeight(1, 40);
   rs.getRange('A2').setValue('Aggiornato: ' + new Date().toLocaleDateString('it-IT')).setFontColor('#888888').setFontSize(10);
@@ -1097,7 +1097,7 @@ function aggiornaRiepilogo(ss, year, MESI) {
   rs.setColumnWidth(4,120); rs.setColumnWidth(5,100); rs.setColumnWidth(6,20);
   rs.setColumnWidth(7,150); rs.setColumnWidth(8,120); rs.setColumnWidth(9,100);
 }`;
-
+ 
 function renderSync() {
   document.getElementById('webhook-url').value   = state.webhookUrl || '';
   document.getElementById('webhook-token').value = state.webhookToken || '';
@@ -1129,7 +1129,7 @@ function toggleTokenVisibility() {
     btn.textContent = '👁';
   }
 }
-
+ 
 function saveWebhook() {
   state.webhookUrl   = document.getElementById('webhook-url').value.trim();
   state.webhookToken = document.getElementById('webhook-token').value.trim();
@@ -1140,13 +1140,14 @@ async function syncNow() {
   if (!state.webhookUrl) { toast('⚠️ Imposta prima l\'URL'); return; }
   const ym = document.getElementById('sync-month').value;
   const entries = state.expenses.filter(e => e.date.startsWith(ym));
-  if (!entries.length) { toast('Nessuna voce in questo mese'); return; }
+  // Permettiamo sync anche con 0 voci: serve a cancellare dal foglio un mese svuotato nell'app
   const [y] = ym.split('-');
-
+ 
   const btn = document.getElementById('sync-btn');
   if (btn) { btn.disabled = true; btn.textContent = '↑ Invio in corso…'; }
-  toast('Invio in corso…', 6000);
-
+  const isEmpty = entries.length === 0;
+  toast(isEmpty ? 'Pulizia mese in corso…' : 'Invio in corso…', 6000);
+ 
   // Apps Script non può aggiungere header CORS personalizzati tramite ContentService,
   // quindi il browser blocca sempre la risposta. L'unico modo affidabile è no-cors:
   // i dati arrivano a Google ma non possiamo leggere la risposta dal browser.
@@ -1164,7 +1165,7 @@ async function syncNow() {
     state.lastSyncMonth = ym;
     save();
     renderSync();
-    toast('✓ Inviato! Verifica su Google Sheets.');
+    toast(isEmpty ? '✓ Mese rimosso da Google Sheets.' : '✓ Inviato! Verifica su Google Sheets.');
   } catch(err) {
     toast('⚠️ Errore di rete. Controlla l\'URL e la connessione.');
   } finally {
@@ -1180,7 +1181,7 @@ function toggleScript() {
 function copyScript() {
   navigator.clipboard.writeText(APPS_SCRIPT).then(() => toast('✓ Script copiato!')).catch(() => toast('Seleziona manualmente'));
 }
-
+ 
 // ── RECURRING ────────────────────────────────────────────────
 function updateRecDayLabel() {
   const freq = document.getElementById('rec-freq').value;
@@ -1271,7 +1272,7 @@ function getDueDates(rec,since,today) {
   }
   return dates;
 }
-
+ 
 // ── SETTINGS ────────────────────────────────────────────────
 function renderSettings() {
   document.getElementById('cat-settings').innerHTML = state.categories.map((c,i) =>
@@ -1355,7 +1356,7 @@ function checkAutoSync() {
   const d=new Date(), lastDay=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
   if(d.getDate()===lastDay&&state.webhookUrl){const k='autosync_'+curYM();if(!localStorage.getItem(k)){syncNow();localStorage.setItem(k,'1');}}
 }
-
+ 
 // ── INIT ────────────────────────────────────────────────────
 load();
 applyRecurringPayments();
