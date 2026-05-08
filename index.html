@@ -389,7 +389,13 @@ body {
     <div class="card">
       <div class="row" style="flex-wrap:wrap;gap:6px">
         <input class="row-input" id="webhook-url" placeholder="https://script.google.com/macros/s/…" style="font-size:13px" />
-        <button onclick="saveWebhook()" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:6px 14px;font-size:13px;font-weight:600;font-family:-apple-system,sans-serif;cursor:pointer;flex-shrink:0">Salva</button>
+      </div>
+      <div class="row" style="flex-wrap:wrap;gap:6px">
+        <div class="row-icon" style="background:#F5F0FF">🔑</div>
+        <input class="row-input" id="webhook-token" placeholder="Token segreto (opzionale)" style="font-size:13px" autocomplete="off" />
+      </div>
+      <div class="row" style="padding-top:8px;padding-bottom:8px">
+        <button onclick="saveWebhook()" style="width:100%;background:var(--accent);color:white;border:none;border-radius:8px;padding:10px;font-size:14px;font-weight:600;font-family:-apple-system,sans-serif;cursor:pointer">Salva</button>
       </div>
     </div>
   </div>
@@ -555,6 +561,7 @@ let state = {
   currentType:    'expense',
   customEmoji:    {},
   webhookUrl: '',
+  webhookToken: '',
   lastSync:   null,
   recurring:  []
 };
@@ -1091,7 +1098,8 @@ function aggiornaRiepilogo(ss, year, MESI) {
 }`;
 
 function renderSync() {
-  document.getElementById('webhook-url').value = state.webhookUrl || '';
+  document.getElementById('webhook-url').value   = state.webhookUrl || '';
+  document.getElementById('webhook-token').value = state.webhookToken || '';
   document.getElementById('script-box').textContent = APPS_SCRIPT;
   const ok = !!state.lastSync;
   const [sy, sm] = ok && state.lastSyncMonth ? state.lastSyncMonth.split('-') : [null, null];
@@ -1109,7 +1117,12 @@ function renderSync() {
       </div>
     </div>`;
 }
-function saveWebhook() { state.webhookUrl = document.getElementById('webhook-url').value.trim(); save(); toast('✓ URL salvato'); }
+function saveWebhook() {
+  state.webhookUrl   = document.getElementById('webhook-url').value.trim();
+  state.webhookToken = document.getElementById('webhook-token').value.trim();
+  save();
+  toast('✓ Impostazioni salvate');
+}
 async function syncNow() {
   if (!state.webhookUrl) { toast('⚠️ Imposta prima l\'URL'); return; }
   const ym = document.getElementById('sync-month').value;
@@ -1130,7 +1143,7 @@ async function syncNow() {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ month: ym, year: parseInt(y), expenses: entries })
+      body: JSON.stringify({ month: ym, year: parseInt(y), expenses: entries, token: state.webhookToken || '' })
     });
     // Con no-cors arriviamo qui se la richiesta è partita (anche se la risposta è opaca).
     // Un errore di rete reale (URL sbagliato, offline) lancia eccezione e va nel catch.
