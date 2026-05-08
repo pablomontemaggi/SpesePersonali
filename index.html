@@ -280,6 +280,23 @@ body {
   display: none; white-space: nowrap; box-shadow: 0 4px 24px rgba(0,0,0,.2);
   max-width: calc(100% - 32px);
 }
+/* ── MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.4);
+  display: flex; align-items: flex-end; justify-content: center;
+  z-index: 500; padding-bottom: env(safe-area-inset-bottom,0px);
+}
+.modal-overlay.hidden { display: none; }
+.modal-sheet {
+  background: var(--surface); border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  width: 100%; max-width: 430px; padding: 20px 20px 16px;
+}
+.modal-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+.modal-msg   { font-size: 15px; color: var(--text2); margin-bottom: 18px; line-height: 1.4; }
+.modal-btns  { display: flex; gap: 10px; }
+.modal-btn   { flex: 1; padding: 14px; border: none; border-radius: var(--radius-md); font-size: 16px; font-weight: 600; font-family: -apple-system,sans-serif; cursor: pointer; }
+.modal-btn-cancel  { background: var(--bg); color: var(--text); }
+.modal-btn-confirm { background: var(--red); color: white; }
 </style>
 </head>
 <body>
@@ -537,7 +554,36 @@ body {
  
 <div class="toast" id="toast"></div>
  
+<!-- MODAL conferma -->
+<div class="modal-overlay hidden" id="modal-overlay">
+  <div class="modal-sheet">
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-msg"   id="modal-msg"></div>
+    <div class="modal-btns">
+      <button class="modal-btn modal-btn-cancel"  id="modal-cancel">Annulla</button>
+      <button class="modal-btn modal-btn-confirm" id="modal-confirm">Elimina</button>
+    </div>
+  </div>
+</div>
+ 
 <script>
+// ── MODAL ────────────────────────────────────────────────────
+function showModal(title, msg, confirmLabel, onConfirm) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-msg').textContent   = msg;
+  const btn = document.getElementById('modal-confirm');
+  btn.textContent = confirmLabel || 'Conferma';
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  btn.onclick = function() { closeModal(); onConfirm(); };
+  document.getElementById('modal-cancel').onclick = closeModal;
+  document.getElementById('modal-overlay').onclick = function(e) {
+    if (e.target === document.getElementById('modal-overlay')) closeModal();
+  };
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.add('hidden');
+}
+ 
 const MONTHS = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 const COLORS  = ['#007AFF','#34C759','#FF9500','#FF3B30','#AF52DE','#5AC8FA','#FFCC00','#FF2D55','#00C7BE','#30B0C7','#32ADE6','#64D2FF','#FF6961','#C969E0'];
 const EMOJI_MAP = {'Casa':'🏠','Auto':'🚗','Cibo & Ristoranti':'🍕','Vestiti':'👗','Viaggi':'✈️','Salute':'💊','Spesa':'🛒','Cura personale':'💆','Trasporti':'🚇','Abbonamenti':'📱','Regali':'🎁','Sport':'⚽','Intrattenimento':'🎭','Stipendio':'💼','Freelance':'💻','Affitto percepito':'🏡','Rimborso':'↩️','Regalo ricevuto':'🎁','Altro':'💰'};
