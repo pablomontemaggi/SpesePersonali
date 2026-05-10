@@ -511,6 +511,18 @@ body {
     <div class="card" style="margin-top:8px" id="inc-cat-settings"></div>
   </div>
   <div class="group">
+    <div class="group-title">Budget mensile</div>
+    <div class="card">
+      <div class="row">
+        <div class="row-icon" style="background:#E8F8EC">🎯</div>
+        <span class="row-label">Budget mensile</span>
+        <span class="row-input-label">€</span>
+        <input class="row-input" id="monthly-budget" type="number" placeholder="0" step="1" min="0" max="999999" inputmode="decimal" style="text-align:right;max-width:100px;flex:none" />
+        <button onclick="saveBudget()" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:6px 12px;font-size:13px;font-weight:600;font-family:-apple-system,sans-serif;cursor:pointer;flex-shrink:0;margin-left:4px">Salva</button>
+      </div>
+    </div>
+  </div>
+  <div class="group">
     <div class="group-title">Dati</div>
     <div class="card">
       <div class="row" onclick="exportJSON()" style="cursor:pointer">
@@ -607,6 +619,7 @@ let state = {
   recSelectedCat: '',
   currentType:    'expense',
   customEmoji:    {},
+  monthlyBudget: 0,
   webhookUrl: '',
   webhookToken: '',
   lastSync:   null,
@@ -1223,7 +1236,7 @@ async function syncNow() {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ month: ym, year: parseInt(y), expenses: entries, token: state.webhookToken || '' })
+      body: JSON.stringify({ month: ym, year: parseInt(y), expenses: entries, token: state.webhookToken || '', budget: state.monthlyBudget || 0 })
     });
     // Con no-cors arriviamo qui se la richiesta è partita (anche se la risposta è opaca).
     // Un errore di rete reale (URL sbagliato, offline) lancia eccezione e va nel catch.
@@ -1348,6 +1361,14 @@ function getDueDates(rec,since,today) {
 }
  
 // ── SETTINGS ────────────────────────────────────────────────
+function saveBudget() {
+  const val = parseFloat(document.getElementById('monthly-budget').value);
+  if (isNaN(val) || val < 0) { toast('⚠️ Inserisci un budget valido'); return; }
+  state.monthlyBudget = val;
+  save();
+  toast('✓ Budget salvato');
+}
+ 
 function renderSettings() {
   document.getElementById('cat-settings').innerHTML = state.categories.map((c,i) =>
     `<div class="cat-setting-row"><span class="cat-emoji-sm">${getEmoji(c)}</span><span class="cat-name">${c}</span><button class="cat-del-btn" onclick="delCat(${i})">−</button></div>`
@@ -1356,6 +1377,7 @@ function renderSettings() {
     `<div class="cat-setting-row"><span class="cat-emoji-sm">${getEmoji(c)}</span><span class="cat-name">${c}</span><button class="cat-del-btn" onclick="delIncCat(${i})">−</button></div>`
   ).join('');
   document.getElementById('settings-count').textContent = state.expenses.length;
+  document.getElementById('monthly-budget').value = state.monthlyBudget || '';
 }
 function addCat() {
   const v = document.getElementById('new-cat').value.trim();
